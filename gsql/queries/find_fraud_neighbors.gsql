@@ -1,0 +1,30 @@
+// ==============================================================================
+// Query: find_fraud_neighbors
+// Identifies neighbors within 2 hops linked to confirmed fraud cases.
+// ==============================================================================
+
+USE GRAPH FraudInvestigationGraph
+
+CREATE QUERY find_fraud_neighbors(VERTEX start_vertex, INT max_hops) FOR GRAPH FraudInvestigationGraph {
+    SetAccum<VERTEX<FraudCase>> @@confirmed_fraud_cases;
+    SumAccum<INT> @@fraud_neighbor_count = 0;
+
+    Start = { start_vertex };
+
+    // Hop 1
+    N1 = SELECT tgt FROM Start:s -(:e)- :tgt;
+    CasesH1 = SELECT fc FROM N1:n -(CASE_INVESTIGATES_TRANSACTION | CASE_INVESTIGATES_ACCOUNT | CASE_INVESTIGATES_DEVICE:e)- FraudCase:fc
+              WHERE fc.outcome == "FRAUD_CONFIRMED"
+              ACCUM @@confirmed_fraud_cases += fc;
+
+    // Hop 2 if allowed
+    IF max_hops >= 2 THEN
+        N2 = SELECT tgt FROM N1:n -(:e)- :tgt WHERE tgt != start_vertex;
+        CasesH2 = SELECT fc FROM N2:n -(CASE_INVESTIGATES_TRANSACTION | CASE_INVESTIGATES_ACCOUNT | CASE_INVESTIGATES_DEVICE:e)- FraudCase:fc
+                  WHERE fc.outcome == "FRAUD_CONFIRMED"
+                  ACCUM @@confirmed_fraud_cases += fc;
+    END;
+
+    PRINT @@confirmed_fraud_cases.size() AS fraud_neighbors_count,
+          @@confirmed_fraud_cases AS linked_fraud_cases;
+}

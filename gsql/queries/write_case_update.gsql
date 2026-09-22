@@ -1,0 +1,29 @@
+// ==============================================================================
+// Query: write_case_update
+// Appends decisions and updates case risk/completeness without overwriting.
+// ==============================================================================
+
+USE GRAPH FraudInvestigationGraph
+
+CREATE QUERY write_case_update(
+    STRING case_id,
+    STRING status,
+    STRING risk_level,
+    DOUBLE confidence,
+    DOUBLE evidence_completeness,
+    STRING stop_reason,
+    STRING summary
+) FOR GRAPH FraudInvestigationGraph {
+    CASE_SET = { FraudCase.* };
+    TargetCase = SELECT c FROM CASE_SET:c
+        WHERE c.case_id == case_id
+        POST-ACCUM
+            c.status = status,
+            c.risk_level = risk_level,
+            c.confidence = confidence,
+            c.evidence_completeness = evidence_completeness,
+            c.stop_reason = stop_reason,
+            c.summary = summary;
+
+    PRINT TargetCase;
+}

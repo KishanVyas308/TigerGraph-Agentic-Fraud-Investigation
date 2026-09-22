@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-09-22T19:02:22.773955+00:00",
+  "status": "passed",
+  "entity_counts": {
+    "customers": 100,
+    "accounts": 150,
+    "devices": 60,
+    "ip_addresses": 50,
+    "merchants": 40,
+    "transactions": 500,
+    "historical_cases": 30,
+    "policies": 5,
+    "typologies": 5,
+    "benchmark_cases": 20
+  },
+  "integrity_errors": [],
+  "benchmark_cases_count": 20,
+  "historical_cases_count": 30,
+  "output_directory": "/Users/kishan/All-Project/Projects/TigerGraph-Agentic-Fraud-Investigation/data/processed"
+}

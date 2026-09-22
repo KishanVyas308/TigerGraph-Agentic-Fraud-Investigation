@@ -1,0 +1,39 @@
+// ==============================================================================
+// TigerGraph Core Data Loading Job (GSQL)
+// Project: TigerGraph Agentic Fraud Investigation Agent (HHGOA)
+// ==============================================================================
+
+USE GRAPH FraudInvestigationGraph
+
+CREATE LOADING JOB load_core_data FOR GRAPH FraudInvestigationGraph {
+    DEFINE FILENAME customer_file;
+    DEFINE FILENAME account_file;
+    DEFINE FILENAME device_file;
+    DEFINE FILENAME ip_file;
+    DEFINE FILENAME merchant_file;
+    DEFINE FILENAME transaction_file;
+
+    // Load Domain Vertices
+    LOAD customer_file TO VERTEX Customer VALUES ($"customer_id", $"created_at", $"risk_tier") USING header="true", separator=",";
+    LOAD account_file TO VERTEX Account VALUES ($"account_id", $"account_type", $"status", $"created_at") USING header="true", separator=",";
+    LOAD device_file TO VERTEX Device VALUES ($"device_id", $"device_type", $"first_seen_at") USING header="true", separator=",";
+    LOAD ip_file TO VERTEX IPAddress VALUES ($"ip_address", $"country_code", $"asn") USING header="true", separator=",";
+    LOAD merchant_file TO VERTEX Merchant VALUES ($"merchant_id", $"merchant_name", $"mcc", $"risk_category") USING header="true", separator=",";
+    LOAD transaction_file TO VERTEX Transaction VALUES (
+        $"transaction_id",
+        $"amount",
+        $"currency",
+        $"timestamp",
+        $"bank_risk_score",
+        $"channel",
+        $"day_of_week",
+        $"hour_of_day"
+    ) USING header="true", separator=",";
+
+    // Load Core Relationship Edges
+    LOAD account_file TO EDGE CUSTOMER_OWNS_ACCOUNT VALUES ($"customer_id", $"account_id") USING header="true", separator=",";
+    LOAD transaction_file TO EDGE ACCOUNT_PERFORMED_TRANSACTION VALUES ($"account_id", $"transaction_id") USING header="true", separator=",";
+    LOAD transaction_file TO EDGE TRANSACTION_TO_MERCHANT VALUES ($"transaction_id", $"merchant_id") USING header="true", separator=",";
+    LOAD transaction_file TO EDGE TRANSACTION_USED_DEVICE VALUES ($"transaction_id", $"device_id") USING header="true", separator=",";
+    LOAD transaction_file TO EDGE TRANSACTION_CONNECTED_IP VALUES ($"transaction_id", $"ip_address") USING header="true", separator=",";
+}

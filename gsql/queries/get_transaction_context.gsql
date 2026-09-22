@@ -1,0 +1,22 @@
+// ==============================================================================
+// Query: get_transaction_context
+// Returns full 1-hop financial context of a target transaction:
+// account, customer, merchant, device, and client IP.
+// ==============================================================================
+
+USE GRAPH FraudInvestigationGraph
+
+CREATE QUERY get_transaction_context(VERTEX<Transaction> target_tx) FOR GRAPH FraudInvestigationGraph {
+    OrAcc = SELECT a FROM target_tx:t -(ACCOUNT_PERFORMED_TRANSACTION:e)- Account:a;
+    Cust = SELECT c FROM OrAcc:a -(CUSTOMER_OWNS_ACCOUNT:e)- Customer:c;
+    Merch = SELECT m FROM target_tx:t -(TRANSACTION_TO_MERCHANT:e)- Merchant:m;
+    Dev = SELECT d FROM target_tx:t -(TRANSACTION_USED_DEVICE:e)- Device:d;
+    IP = SELECT i FROM target_tx:t -(TRANSACTION_CONNECTED_IP:e)- IPAddress:i;
+
+    PRINT target_tx;
+    PRINT OrAcc;
+    PRINT Cust;
+    PRINT Merch;
+    PRINT Dev;
+    PRINT IP;
+}

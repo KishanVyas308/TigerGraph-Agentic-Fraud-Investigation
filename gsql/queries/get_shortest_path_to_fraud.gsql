@@ -1,0 +1,46 @@
+// ==============================================================================
+// Query: get_shortest_path_to_fraud
+// Computes bounded shortest path (max 4 hops) to any confirmed fraud entity.
+// ==============================================================================
+
+USE GRAPH FraudInvestigationGraph
+
+CREATE QUERY get_shortest_path_to_fraud(VERTEX start_vertex, INT max_depth) FOR GRAPH FraudInvestigationGraph {
+    OrAccum<BOOL> @visited = FALSE;
+    MinAccum<INT> @distance = 999;
+    SetAccum<VERTEX<FraudCase>> @@found_fraud_cases;
+    MinAccum<INT> @@shortest_distance = 999;
+
+    Start = { start_vertex };
+    Start = SELECT s FROM Start:s POST-ACCUM s.@visited = TRUE, s.@distance = 0;
+
+    Current = Start;
+    INT current_depth = 0;
+
+    WHILE Current.size() > 0 AND current_depth < max_depth AND @@found_fraud_cases.size() == 0 DO
+        current_depth = current_depth + 1;
+
+        Next = SELECT tgt FROM Current:src -(:e)- :tgt
+               WHERE tgt.@visited == FALSE
+               POST-ACCUM
+                   tgt.@visited = TRUE,
+                   tgt.@distance = current_depth;
+
+        // Check if any vertex in Next links to confirmed FraudCase
+        FraudLinks = SELECT fc FROM Next:n -(CASE_INVESTIGATES_TRANSACTION | CASE_INVESTIGATES_ACCOUNT | CASE_INVESTIGATES_DEVICE:e)- FraudCase:fc
+                     WHERE fc.outcome == "FRAUD_CONFIRMED"
+                     ACCUM
+                         @@found_fraud_cases += fc,
+                         @@shortest_distance += current_depth;
+
+        Current = Next;
+    END;
+
+    INT result_dist = @@shortest_distance;
+    IF result_dist == 999 THEN
+        result_dist = -1;
+    END;
+
+    PRINT result_dist AS shortest_distance_to_fraud,
+          @@found_fraud_cases AS nearest_fraud_cases;
+}

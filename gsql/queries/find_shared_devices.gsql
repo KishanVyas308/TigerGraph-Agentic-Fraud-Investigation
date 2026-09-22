@@ -1,0 +1,41 @@
+// ==============================================================================
+// Query: find_shared_devices
+// Finds other accounts, customers, and prior fraud cases co-occurring on
+// the target device or across devices used by the target account.
+// ==============================================================================
+
+USE GRAPH FraudInvestigationGraph
+
+CREATE QUERY find_shared_devices(VERTEX<Device> target_device) FOR GRAPH FraudInvestigationGraph {
+    SetAccum<VERTEX<Account>> @@shared_accounts;
+    SetAccum<VERTEX<Customer>> @@shared_customers;
+    SetAccum<VERTEX<FraudCase>> @@linked_fraud_cases;
+
+    Dev = { target_device };
+
+    // Device -> Transactions -> Accounts
+    Tx = SELECT t FROM Dev:d -(TRANSACTION_USED_DEVICE:e)- Transaction:t;
+    Acc = SELECT a FROM Tx:t -(ACCOUNT_PERFORMED_TRANSACTION:e)- Account:a
+          ACCUM @@shared_accounts += a;
+
+    // Accounts -> Customers
+    Cust = SELECT c FROM Acc:a -(CUSTOMER_OWNS_ACCOUNT:e)- Customer:c
+           ACCUM @@shared_customers += c;
+
+    // Direct and indirect prior fraud cases
+    CasesViaDev = SELECT fc FROM Dev:d -(CASE_INVESTIGATES_DEVICE:e)- FraudCase:fc
+                  WHERE fc.outcome == "FRAUD_CONFIRMED"
+                  ACCUM @@linked_fraud_cases += fc;
+
+    CasesViaAcc = SELECT fc FROM Acc:a -(CASE_INVESTIGATES_ACCOUNT:e)- FraudCase:fc
+                  WHERE fc.outcome == "FRAUD_CONFIRMED"
+                  ACCUM @@linked_fraud_cases += fc;
+
+    PRINT target_device.device_id AS device_id,
+          @@shared_accounts.size() AS shared_account_count,
+          @@shared_customers.size() AS shared_customer_count,
+          @@linked_fraud_cases.size() AS prior_fraud_cases_count,
+          @@shared_accounts AS accounts,
+          @@shared_customers AS customers,
+          @@linked_fraud_cases AS fraud_cases;
+}

@@ -1,0 +1,61 @@
+// ==============================================================================
+// Query: get_transaction_behavior
+// Calculates historical behavioral baseline for an originating account:
+// average amount, transaction count, velocity in lookback window, and merchant novelty.
+// ==============================================================================
+
+USE GRAPH FraudInvestigationGraph
+
+CREATE QUERY get_transaction_behavior(VERTEX<Transaction> target_tx, INT lookback_hours) FOR GRAPH FraudInvestigationGraph {
+    SumAccum<DOUBLE> @@total_amount = 0.0;
+    AvgAccum @@avg_amount;
+    SumAccum<INT> @@tx_count = 0;
+    SumAccum<INT> @@velocity_recent = 0;
+    SetAccum<STRING> @@known_merchants;
+    MaxAccum<DATETIME> @@target_time;
+    MaxAccum<DOUBLE> @@target_amt;
+    MaxAccum<STRING> @@target_merch;
+
+    // 1. Get target details
+    T_Start = { target_tx };
+    T_Info = SELECT t FROM T_Start:t
+        POST-ACCUM
+            @@target_time += t.timestamp,
+            @@target_amt += t.amount;
+
+    T_Merch = SELECT m FROM T_Start:t -(TRANSACTION_TO_MERCHANT:e)- Merchant:m
+        POST-ACCUM @@target_merch += m.merchant_id;
+
+    // 2. Trace account and all transactions within lookback
+    Acc = SELECT a FROM T_Start:t -(ACCOUNT_PERFORMED_TRANSACTION:e)- Account:a;
+
+    AllTx = SELECT t FROM Acc:a -(ACCOUNT_PERFORMED_TRANSACTION:e)- Transaction:t
+        WHERE t != target_tx AND datetime_diff(@@target_time, t.timestamp) >= 0
+        ACCUM
+            @@total_amount += t.amount,
+            @@avg_amount += t.amount,
+            @@tx_count += 1,
+            IF datetime_diff(@@target_time, t.timestamp) <= (lookback_hours * 3600) THEN
+                @@velocity_recent += 1
+            END;
+
+    PastMerchants = SELECT m FROM AllTx:t -(TRANSACTION_TO_MERCHANT:e)- Merchant:m
+        POST-ACCUM @@known_merchants += m.merchant_id;
+
+    BOOL is_new_merchant = TRUE;
+    IF @@known_merchants.contains(@@target_merch) THEN
+        is_new_merchant = FALSE;
+    END;
+
+    DOUBLE amount_ratio = 1.0;
+    IF @@avg_amount > 0.0 THEN
+        amount_ratio = @@target_amt / @@avg_amount;
+    END;
+
+    PRINT @@target_amt AS target_amount,
+          @@avg_amount AS historical_avg_amount,
+          amount_ratio AS amount_ratio_to_mean,
+          @@tx_count AS historical_tx_count,
+          @@velocity_recent AS velocity_recent_window,
+          is_new_merchant;
+}

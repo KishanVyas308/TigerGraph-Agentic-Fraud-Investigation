@@ -1,0 +1,29 @@
+// ==============================================================================
+// Query: get_connected_cluster
+// Discovers the local connected cluster size and constituent vertex types.
+// ==============================================================================
+
+USE GRAPH FraudInvestigationGraph
+
+CREATE QUERY get_connected_cluster(VERTEX start_vertex, INT max_hops) FOR GRAPH FraudInvestigationGraph {
+    SetAccum<VERTEX> @@cluster_vertices;
+    MapAccum<STRING, INT> @@vertex_type_counts;
+
+    Start = { start_vertex };
+    @@cluster_vertices += start_vertex;
+    Current = Start;
+
+    WHILE Current.size() > 0 AND max_hops > 0 DO
+        Next = SELECT tgt FROM Current:src -(:e)- :tgt
+               WHERE NOT @@cluster_vertices.contains(tgt)
+               POST-ACCUM
+                   @@cluster_vertices += tgt,
+                   @@vertex_type_counts += (tgt.type -> 1);
+        Current = Next;
+        max_hops = max_hops - 1;
+    END;
+
+    PRINT @@cluster_vertices.size() AS cluster_size,
+          @@vertex_type_counts AS vertex_distribution,
+          @@cluster_vertices AS cluster_nodes;
+}

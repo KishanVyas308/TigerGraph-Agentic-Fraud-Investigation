@@ -1,0 +1,38 @@
+// ==============================================================================
+// Query: find_similar_graph_cases
+// Discovers historical cases sharing devices, accounts, or typology with the target case.
+// ==============================================================================
+
+USE GRAPH FraudInvestigationGraph
+
+CREATE QUERY find_similar_graph_cases(VERTEX<FraudCase> target_case, INT limit_cases) FOR GRAPH FraudInvestigationGraph {
+    SetAccum<VERTEX<FraudCase>> @@similar_cases;
+    MapAccum<VERTEX<FraudCase>, INT> @@shared_evidence_score;
+
+    FC = { target_case };
+
+    // Cases sharing devices
+    Devs = SELECT d FROM FC:c -(CASE_INVESTIGATES_DEVICE:e)- Device:d;
+    CasesViaDev = SELECT other_case FROM Devs:d -(CASE_INVESTIGATES_DEVICE:e)- FraudCase:other_case
+                  WHERE other_case != target_case
+                  ACCUM @@shared_evidence_score += (other_case -> 3);
+
+    // Cases sharing accounts
+    Accs = SELECT a FROM FC:c -(CASE_INVESTIGATES_ACCOUNT:e)- Account:a;
+    CasesViaAcc = SELECT other_case FROM Accs:a -(CASE_INVESTIGATES_ACCOUNT:e)- FraudCase:other_case
+                  WHERE other_case != target_case
+                  ACCUM @@shared_evidence_score += (other_case -> 4);
+
+    // Cases sharing typology
+    Typs = SELECT t FROM FC:c -(CASE_MATCHES_TYPOLOGY:e)- Typology:t;
+    CasesViaTyp = SELECT other_case FROM Typs:t -(CASE_MATCHES_TYPOLOGY:e)- FraudCase:other_case
+                  WHERE other_case != target_case
+                  ACCUM @@shared_evidence_score += (other_case -> 1);
+
+    TopCases = SELECT c FROM FraudCase:c
+               WHERE @@shared_evidence_score.containsKey(c)
+               ORDER BY @@shared_evidence_score.get(c) DESC
+               LIMIT limit_cases;
+
+    PRINT TopCases;
+}

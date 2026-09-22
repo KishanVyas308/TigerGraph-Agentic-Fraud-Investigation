@@ -1,0 +1,27 @@
+// ==============================================================================
+// Query: get_device_identity_context
+// Returns device hardware profile, first seen timestamp, and account counts.
+// ==============================================================================
+
+USE GRAPH FraudInvestigationGraph
+
+CREATE QUERY get_device_identity_context(VERTEX<Device> target_device) FOR GRAPH FraudInvestigationGraph {
+    SetAccum<VERTEX<Account>> @@accounts;
+    SetAccum<VERTEX<Customer>> @@customers;
+
+    Dev = { target_device };
+
+    Tx = SELECT t FROM Dev:d -(TRANSACTION_USED_DEVICE:e)- Transaction:t;
+    Acc = SELECT a FROM Tx:t -(ACCOUNT_PERFORMED_TRANSACTION:e)- Account:a
+          ACCUM @@accounts += a;
+    Cust = SELECT c FROM Acc:a -(CUSTOMER_OWNS_ACCOUNT:e)- Customer:c
+           ACCUM @@customers += c;
+
+    PRINT target_device.device_id AS device_id,
+          target_device.device_type AS device_type,
+          target_device.first_seen_at AS first_seen_at,
+          @@accounts.size() AS linked_accounts_count,
+          @@customers.size() AS linked_customers_count,
+          @@accounts AS accounts,
+          @@customers AS customers;
+}

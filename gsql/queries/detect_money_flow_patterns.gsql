@@ -1,0 +1,43 @@
+// ==============================================================================
+// Query: detect_money_flow_patterns
+// Evaluates account transaction graph for fan-in, fan-out, and circular flows.
+// ==============================================================================
+
+USE GRAPH FraudInvestigationGraph
+
+CREATE QUERY detect_money_flow_patterns(VERTEX<Account> target_account) FOR GRAPH FraudInvestigationGraph {
+    SumAccum<INT> @@fan_out_count = 0;
+    SumAccum<INT> @@fan_in_count = 0;
+    SumAccum<DOUBLE> @@outbound_sum = 0.0;
+    SumAccum<DOUBLE> @@inbound_sum = 0.0;
+    OrAccum<BOOL> @@cycle_detected = FALSE;
+
+    Acc = { target_account };
+
+    // Outbound transactions performed by this account
+    OutTx = SELECT t FROM Acc:a -(ACCOUNT_PERFORMED_TRANSACTION:e)- Transaction:t
+            ACCUM
+                @@fan_out_count += 1,
+                @@outbound_sum += t.amount;
+
+    // Destination accounts from outbound transactions
+    OutDestAcc = SELECT dest_acc FROM OutTx:t -(TRANSACTION_TO_ACCOUNT:e)- Account:dest_acc;
+
+    // Inbound transactions transferred to this account
+    InTx = SELECT t FROM Acc:a -(<TRANSACTION_TO_ACCOUNT:e)- Transaction:t
+           ACCUM
+               @@fan_in_count += 1,
+               @@inbound_sum += t.amount;
+
+    // Check for circular loop: do any destination accounts transfer back within 2 hops?
+    LoopCheck = SELECT loop_acc FROM OutDestAcc:d -(ACCOUNT_PERFORMED_TRANSACTION:e1)- Transaction:t -(TRANSACTION_TO_ACCOUNT:e2)- Account:loop_acc
+                WHERE loop_acc == target_account
+                ACCUM @@cycle_detected += TRUE;
+
+    PRINT target_account.account_id AS account_id,
+          @@fan_in_count AS fan_in_count,
+          @@fan_out_count AS fan_out_count,
+          @@inbound_sum AS inbound_sum,
+          @@outbound_sum AS outbound_sum,
+          @@cycle_detected AS cycle_detected;
+}

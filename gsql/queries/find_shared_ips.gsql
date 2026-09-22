@@ -1,0 +1,25 @@
+// ==============================================================================
+// Query: find_shared_ips
+// Finds accounts and transactions associated with a client IP address.
+// ==============================================================================
+
+USE GRAPH FraudInvestigationGraph
+
+CREATE QUERY find_shared_ips(VERTEX<IPAddress> target_ip) FOR GRAPH FraudInvestigationGraph {
+    SetAccum<VERTEX<Account>> @@shared_accounts;
+    SetAccum<VERTEX<Transaction>> @@transactions;
+
+    IP = { target_ip };
+    Tx = SELECT t FROM IP:i -(TRANSACTION_CONNECTED_IP:e)- Transaction:t
+         ACCUM @@transactions += t;
+
+    Acc = SELECT a FROM Tx:t -(ACCOUNT_PERFORMED_TRANSACTION:e)- Account:a
+          ACCUM @@shared_accounts += a;
+
+    PRINT target_ip.ip_address AS ip_address,
+          target_ip.country_code AS country_code,
+          target_ip.asn AS asn,
+          @@shared_accounts.size() AS shared_account_count,
+          @@transactions.size() AS transaction_count,
+          @@shared_accounts AS accounts;
+}

@@ -1,0 +1,21 @@
+// ==============================================================================
+// Query: get_case_timeline
+// Retrieves full append-oriented audit history of a case.
+// ==============================================================================
+
+USE GRAPH FraudInvestigationGraph
+
+CREATE QUERY get_case_timeline(VERTEX<FraudCase> target_case) FOR GRAPH FraudInvestigationGraph {
+    FC = { target_case };
+
+    Evd = SELECT e FROM FC:c -(CASE_HAS_EVIDENCE:edge)- Evidence:e;
+    Dec = SELECT d FROM FC:c -(CASE_HAS_DECISION:edge)- Decision:d;
+    Act = SELECT a FROM FC:c -(CASE_HAS_ACTION:edge)- Action:a;
+    App = SELECT p FROM FC:c -(CASE_HAS_APPROVAL:edge)- Approval:p;
+
+    PRINT target_case;
+    PRINT Evd;
+    PRINT Dec;
+    PRINT Act;
+    PRINT App;
+}

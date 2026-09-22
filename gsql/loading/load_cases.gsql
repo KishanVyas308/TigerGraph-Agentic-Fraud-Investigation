@@ -1,0 +1,51 @@
+// ==============================================================================
+// TigerGraph Case Memory & Policy Loading Job (GSQL)
+// Project: TigerGraph Agentic Fraud Investigation Agent (HHGOA)
+// ==============================================================================
+
+USE GRAPH FraudInvestigationGraph
+
+CREATE LOADING JOB load_cases FOR GRAPH FraudInvestigationGraph {
+    DEFINE FILENAME case_file;
+    DEFINE FILENAME policy_file;
+    DEFINE FILENAME typology_file;
+    DEFINE FILENAME case_tx_file;
+    DEFINE FILENAME case_acc_file;
+    DEFINE FILENAME case_dev_file;
+
+    // Load Case Memory & Governance Vertices
+    LOAD case_file TO VERTEX FraudCase VALUES (
+        $"case_id",
+        $"opened_at",
+        $"closed_at",
+        "RESOLVED",
+        $"outcome",
+        $"primary_typology",
+        "HIGH",
+        0.95,
+        1.0,
+        "SUFFICIENT_EVIDENCE_FOR_ACTION",
+        $"summary"
+    ) USING header="true", separator=",";
+
+    LOAD policy_file TO VERTEX Policy VALUES (
+        $"policy_id",
+        $"title",
+        $"category",
+        $"content",
+        $"action_required"
+    ) USING header="true", separator=",";
+
+    LOAD typology_file TO VERTEX Typology VALUES (
+        $"typology_id",
+        $"name",
+        $"description",
+        $"indicators"
+    ) USING header="true", separator=",";
+
+    // Load Case Relationship Edges
+    LOAD case_file TO EDGE CASE_MATCHES_TYPOLOGY VALUES ($"case_id", $"primary_typology") USING header="true", separator=",";
+    LOAD case_tx_file TO EDGE CASE_INVESTIGATES_TRANSACTION VALUES ($"case_id", $"transaction_id") USING header="true", separator=",";
+    LOAD case_acc_file TO EDGE CASE_INVESTIGATES_ACCOUNT VALUES ($"case_id", $"account_id") USING header="true", separator=",";
+    LOAD case_dev_file TO EDGE CASE_INVESTIGATES_DEVICE VALUES ($"case_id", $"device_id") USING header="true", separator=",";
+}

@@ -1,0 +1,30 @@
+// ==============================================================================
+// Query: get_entity_neighborhood
+// Traverses a bounded k-hop neighborhood (max 2 hops, max 50 vertices)
+// around a target entity, returning vertices and connecting edges.
+// ==============================================================================
+
+USE GRAPH FraudInvestigationGraph
+
+CREATE QUERY get_entity_neighborhood(VERTEX start_vertex, INT max_depth, INT max_vertices) FOR GRAPH FraudInvestigationGraph {
+    SetAccum<VERTEX> @@visited_vertices;
+    SetAccum<EDGE> @@collected_edges;
+
+    Start = { start_vertex };
+    @@visited_vertices += start_vertex;
+    Current = Start;
+
+    WHILE Current.size() > 0 AND max_depth > 0 AND @@visited_vertices.size() < max_vertices DO
+        Next = SELECT tgt
+               FROM Current:src -(:e)- :tgt
+               WHERE NOT @@visited_vertices.contains(tgt)
+               ACCUM @@collected_edges += e
+               POST-ACCUM @@visited_vertices += tgt
+               LIMIT max_vertices;
+        Current = Next;
+        max_depth = max_depth - 1;
+    END;
+
+    PRINT @@visited_vertices AS vertices;
+    PRINT @@collected_edges AS edges;
+}

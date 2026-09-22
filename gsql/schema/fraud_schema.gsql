@@ -1,0 +1,161 @@
+// ==============================================================================
+// TigerGraph Fraud Investigation Schema (GSQL)
+// Project: TigerGraph Agentic Fraud Investigation Agent (HHGOA)
+// ==============================================================================
+
+CREATE GRAPH FraudInvestigationGraph ()
+
+USE GRAPH FraudInvestigationGraph
+
+// ------------------------------------------------------------------------------
+// Core Financial Domain Vertices
+// ------------------------------------------------------------------------------
+
+CREATE VERTEX Customer (
+    PRIMARY_ID customer_id STRING,
+    created_at DATETIME,
+    risk_tier STRING
+) WITH STATS="OUTDEGREE_BY_EDGETYPE";
+
+CREATE VERTEX Account (
+    PRIMARY_ID account_id STRING,
+    account_type STRING,
+    status STRING,
+    created_at DATETIME
+) WITH STATS="OUTDEGREE_BY_EDGETYPE";
+
+CREATE VERTEX Transaction (
+    PRIMARY_ID transaction_id STRING,
+    amount DOUBLE,
+    currency STRING,
+    timestamp DATETIME,
+    bank_risk_score DOUBLE,
+    channel STRING,
+    day_of_week INT,
+    hour_of_day INT
+) WITH STATS="OUTDEGREE_BY_EDGETYPE";
+
+CREATE VERTEX Device (
+    PRIMARY_ID device_id STRING,
+    device_type STRING,
+    first_seen_at DATETIME
+) WITH STATS="OUTDEGREE_BY_EDGETYPE";
+
+CREATE VERTEX IPAddress (
+    PRIMARY_ID ip_address STRING,
+    country_code STRING,
+    asn STRING
+) WITH STATS="OUTDEGREE_BY_EDGETYPE";
+
+CREATE VERTEX Merchant (
+    PRIMARY_ID merchant_id STRING,
+    merchant_name STRING,
+    mcc STRING,
+    risk_category STRING
+) WITH STATS="OUTDEGREE_BY_EDGETYPE";
+
+// ------------------------------------------------------------------------------
+// Case Memory, Policy, and Audit Vertices
+// ------------------------------------------------------------------------------
+
+CREATE VERTEX FraudCase (
+    PRIMARY_ID case_id STRING,
+    opened_at DATETIME,
+    closed_at DATETIME,
+    status STRING,
+    outcome STRING,
+    primary_typology STRING,
+    risk_level STRING,
+    confidence DOUBLE,
+    evidence_completeness DOUBLE,
+    stop_reason STRING,
+    summary STRING
+) WITH STATS="OUTDEGREE_BY_EDGETYPE";
+
+CREATE VERTEX Evidence (
+    PRIMARY_ID evidence_id STRING,
+    category STRING,
+    source STRING,
+    reliability STRING,
+    fact STRING,
+    timestamp DATETIME
+) WITH STATS="OUTDEGREE_BY_EDGETYPE";
+
+CREATE VERTEX Decision (
+    PRIMARY_ID decision_id STRING,
+    stage STRING,
+    recommended_action STRING,
+    pre_or_post STRING,
+    reasoning STRING,
+    timestamp DATETIME
+) WITH STATS="OUTDEGREE_BY_EDGETYPE";
+
+CREATE VERTEX Action (
+    PRIMARY_ID action_id STRING,
+    action_type STRING,
+    execution_mode STRING,
+    status STRING,
+    payload STRING,
+    timestamp DATETIME
+) WITH STATS="OUTDEGREE_BY_EDGETYPE";
+
+CREATE VERTEX Approval (
+    PRIMARY_ID approval_id STRING,
+    decision STRING,
+    role STRING,
+    comment STRING,
+    timestamp DATETIME
+) WITH STATS="OUTDEGREE_BY_EDGETYPE";
+
+CREATE VERTEX Policy (
+    PRIMARY_ID policy_id STRING,
+    title STRING,
+    category STRING,
+    content STRING,
+    action_required STRING
+) WITH STATS="OUTDEGREE_BY_EDGETYPE";
+
+CREATE VERTEX Typology (
+    PRIMARY_ID typology_id STRING,
+    name STRING,
+    description STRING,
+    indicators STRING
+) WITH STATS="OUTDEGREE_BY_EDGETYPE";
+
+// ------------------------------------------------------------------------------
+// Core Financial Domain Edges
+// ------------------------------------------------------------------------------
+
+// Ownership and Account Linkage
+CREATE UNDIRECTED EDGE CUSTOMER_OWNS_ACCOUNT (FROM Customer, TO Account);
+
+// Financial Activity (Directed money and transaction initiation)
+CREATE DIRECTED EDGE ACCOUNT_PERFORMED_TRANSACTION (FROM Account, TO Transaction);
+CREATE DIRECTED EDGE TRANSACTION_TO_MERCHANT (FROM Transaction, TO Merchant);
+CREATE DIRECTED EDGE TRANSACTION_TO_ACCOUNT (FROM Transaction, TO Account);
+
+// Infrastructure and Channel Relationships (Undirected for shared-device/shared-IP analysis)
+CREATE UNDIRECTED EDGE TRANSACTION_USED_DEVICE (FROM Transaction, TO Device);
+CREATE UNDIRECTED EDGE TRANSACTION_CONNECTED_IP (FROM Transaction, TO IPAddress);
+
+// ------------------------------------------------------------------------------
+// Case Memory & Investigation Audit Edges
+// ------------------------------------------------------------------------------
+
+CREATE UNDIRECTED EDGE CASE_INVESTIGATES_TRANSACTION (FROM FraudCase, TO Transaction);
+CREATE UNDIRECTED EDGE CASE_INVESTIGATES_ACCOUNT (FROM FraudCase, TO Account);
+CREATE UNDIRECTED EDGE CASE_INVESTIGATES_DEVICE (FROM FraudCase, TO Device);
+
+CREATE UNDIRECTED EDGE CASE_HAS_EVIDENCE (FROM FraudCase, TO Evidence);
+CREATE UNDIRECTED EDGE CASE_HAS_DECISION (FROM FraudCase, TO Decision);
+CREATE UNDIRECTED EDGE CASE_HAS_ACTION (FROM FraudCase, TO Action);
+CREATE UNDIRECTED EDGE CASE_HAS_APPROVAL (FROM FraudCase, TO Approval);
+
+CREATE UNDIRECTED EDGE CASE_MATCHES_TYPOLOGY (FROM FraudCase, TO Typology);
+CREATE UNDIRECTED EDGE CASE_CITES_POLICY (FROM FraudCase, TO Policy);
+
+// Evidence Association to Observed Financial Entities
+CREATE UNDIRECTED EDGE EVIDENCE_LINKED_TRANSACTION (FROM Evidence, TO Transaction);
+CREATE UNDIRECTED EDGE EVIDENCE_LINKED_ACCOUNT (FROM Evidence, TO Account);
+CREATE UNDIRECTED EDGE EVIDENCE_LINKED_DEVICE (FROM Evidence, TO Device);
+CREATE UNDIRECTED EDGE EVIDENCE_LINKED_IP (FROM Evidence, TO IPAddress);
