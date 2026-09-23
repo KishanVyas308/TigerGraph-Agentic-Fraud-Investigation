@@ -7,10 +7,10 @@
 ## Overall Status
 
 **Status:** In Progress  
-**Completed Layers:** 10 / 41  
+**Completed Layers:** 11 / 41  
 **Current Stage:** Stage B — Retrieval + Evidence  
-**Current Active Layer:** Layer 10 — Evidence Model and Evidence Normalizer  
-**Last Completed Layer:** Layer 9 — Fraud Investigation State Models  
+**Current Active Layer:** Layer 11 — Parallel Evidence Collection Node  
+**Last Completed Layer:** Layer 10 — Evidence Model and Evidence Normalizer  
 **Current Blockers:** None
 
 > Update this file after every completed implementation layer.  
@@ -47,7 +47,7 @@ Stage A is complete when:
 - [x] Layer 7 — Policy, Typology, Regulation, and Historical Case Embeddings
 - [x] Layer 8 — GraphRAG Retrieval Service
 - [x] Layer 9 — Fraud Investigation State Models
-- [ ] Layer 10 — Evidence Model and Evidence Normalizer
+- [x] Layer 10 — Evidence Model and Evidence Normalizer
 - [ ] Layer 11 — Parallel Evidence Collection Node
 - [ ] Layer 12 — Graph Feature Engine
 
@@ -162,25 +162,25 @@ Stage E is complete when:
 
 ## Active Layer
 
-**Layer 10 — Evidence Model and Evidence Normalizer**
+**Layer 11 — Parallel Evidence Collection Node**
 
 ## Goal
 
-Standardize heterogeneous tool outputs into canonical `EvidenceItem` objects with auditable provenance and deduplication.
+Concurrently gather independent baseline evidence branches using `asyncio.gather()`, normalize outputs via `EvidenceNormalizer`, and update `FraudCaseState`.
 
 ## Required Deliverables
 
-- `backend/app/evidence/normalizer.py`
-- `tests/unit/test_evidence_normalizer.py`
+- `backend/app/agents/nodes/evidence_collection.py`
+- `tests/unit/test_evidence_collection_node.py`
 
 ## Completion Criteria
 
-Layer 10 can be marked complete only when:
+Layer 11 can be marked complete only when:
 
-- GSQL transaction, graph, device, and identity query outputs are normalized to canonical `EvidenceItem` objects,
-- GraphRAG policy, typology, regulatory, and historical case retrieval outputs are normalized with provenance,
-- evidence items are deduplicated deterministically by ID or content hash,
-- policy text is preserved as policy evidence without fabricating transaction facts.
+- 5 baseline evidence branches run concurrently using `asyncio.gather()`,
+- branch failures (e.g. GraphRAG or optional external signals) are isolated without failing the node,
+- raw outputs are converted into canonical `EvidenceItem` models via `EvidenceNormalizer`,
+- node returns a valid state update compatible with `merge_fraud_case_state`.
 
 ---
 
@@ -246,6 +246,13 @@ Layer 10 can be marked complete only when:
   - Modeled `FraudCaseState` with all 6 categories (Identity, Evidence, Features, Reasoning Output, Actions, Case Control).
   - Implemented `merge_fraud_case_state` reducer for LangGraph node returns with list deduplication, categorical routing, and pre/post evidence recommendation preservation.
   - Added unit test suite `tests/unit/test_state_models.py` (all 9 tests passed).
+
+- **Layer 10 Completed**:
+  - Implemented `EvidenceNormalizer` in `backend/app/evidence/normalizer.py` and `backend/app/evidence/__init__.py`.
+  - Added adapters for GSQL transaction context/behavior, shared devices/IPs, fraud neighbors, shortest paths, money flows, and device identity context.
+  - Added GraphRAG policy, typology, regulatory, and case precedent adapters preserving strict provenance (`TIGERGRAPH_GSQL`, `POLICY_GRAPHRAG`, `CASE_MEMORY`, `CUSTOMER_RESPONSE`, `AUTHENTICATION_SERVICE`, `ANALYST_INPUT`, `EXTERNAL_SIGNAL`).
+  - Built bundle normalization and deterministic deduplication.
+  - Added unit test suite `tests/unit/test_evidence_normalizer.py` (all 9 tests passed).
 
 ---
 
