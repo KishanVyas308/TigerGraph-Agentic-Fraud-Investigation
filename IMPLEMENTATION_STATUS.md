@@ -7,10 +7,10 @@
 ## Overall Status
 
 **Status:** In Progress  
-**Completed Layers:** 14 / 41  
-**Current Stage:** Stage B — Retrieval + Evidence  
-**Current Active Layer:** Layer 14 — Laya Fast Classifier  
-**Last Completed Layer:** Layer 13 — Historical LightGBM Risk Signal  
+**Completed Layers:** 15 / 41  
+**Current Stage:** Stage C — Reasoning + Control  
+**Current Active Layer:** Layer 15 — LLM Provider Router  
+**Last Completed Layer:** Layer 14 — Laya Fast Classifier  
 **Current Blockers:** None
 
 > Update this file after every completed implementation layer.  
@@ -54,7 +54,7 @@ Stage A is complete when:
 ## Optional Enhancements
 
 - [x] Layer 13 — Historical LightGBM Risk Signal
-- [ ] Layer 14 — Laya Fast Classifier
+- [x] Layer 14 — Laya Fast Classifier
 
 ## Stage B Exit Criteria
 

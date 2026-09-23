@@ -1,16 +1,17 @@
 # CURRENT_TASK.md — Active Implementation Task
 
 ## Current Active Layer
-**Layer 14 — Laya Fast Classifier (Stage B Optional Signal)**
+**Layer 15 — LLM Provider Router (Stage C — Reasoning + Control)**
 
 ## Objective
-Implement optional Laya local classifier wrapper in `backend/app/models/laya_classifier.py` for lightweight local routing/classification (trigger classification, customer response classification, analyst response classification) with feature flag control and deterministic fallback.
+Implement LLM provider routing and fallback service in `backend/app/llm/router.py` supporting primary Groq models (`openai/gpt-oss-120b`, `openai/gpt-oss-20b`) with automatic fallback to Gemini Flash (`gemini-1.5-flash` / `gemini-2.0-flash`) and structured JSON output schema validation.
 
 ## Acceptance Criteria
-- [ ] Implement fast classification wrapper supporting trigger classification, customer response, and analyst response.
-- [ ] Strictly restrict Laya from making final fraud decisions, deciding account blocking, or voting over evidence items.
-- [ ] Feature-flagged control (`ENABLE_LAYA: bool = False`) with graceful fallback to deterministic parsing or main LLM when disabled or unconfident.
-- [ ] Unit tests pass with 100% success.
+- [ ] Implement `LLMRouter` with primary Groq integration and Gemini Flash fallback.
+- [ ] Support primary model (`openai/gpt-oss-120b`) and fast model (`openai/gpt-oss-20b`).
+- [ ] Handle provider failure, rate limits, timeouts, and API errors with automatic failover to Gemini Flash.
+- [ ] Enforce structured JSON / Pydantic schema generation with repair / retry logic.
+- [ ] Unit tests in `tests/unit/test_llm_router.py` pass with 100% success.
 
 ## Previous Completed Layers
 - Layer 0 — Repository Bootstrap and Local Configuration
@@ -27,3 +28,4 @@ Implement optional Laya local classifier wrapper in `backend/app/models/laya_cla
 - Layer 11 — Parallel Evidence Collection Node
 - Layer 12 — Graph Feature Engine
 - Layer 13 — Historical LightGBM Risk Signal
+- Layer 14 — Laya Fast Classifier

@@ -23,6 +23,11 @@ from backend.app.models.state import (
     merge_fraud_case_state,
 )
 
+from backend.app.models.laya_classifier import (
+    LayaClassificationResult,
+    LayaClassifier,
+)
+
 __all__ = [
     "TriggerType",
     "RiskLevel",
@@ -44,4 +49,6 @@ __all__ = [
     "TimelineEvent",
     "FraudCaseState",
     "merge_fraud_case_state",
+    "LayaClassifier",
+    "LayaClassificationResult",
 ]
