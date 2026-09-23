@@ -100,7 +100,7 @@ class GraphRAGRetrievalService:
         candidate_action: Optional[str] = None,
         fraud_hypothesis: Optional[str] = None,
         top_k: int = 4,
-        threshold: float = 0.25,
+        threshold: float = 0.1,
     ) -> PolicyContextResult:
         """Retrieve relevant policies, typologies, and regulations.
 

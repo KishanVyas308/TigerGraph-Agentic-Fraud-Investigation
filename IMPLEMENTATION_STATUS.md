@@ -7,10 +7,10 @@
 ## Overall Status
 
 **Status:** In Progress  
-**Completed Layers:** 12 / 41  
+**Completed Layers:** 13 / 41  
 **Current Stage:** Stage B — Retrieval + Evidence  
-**Current Active Layer:** Layer 12 — Graph Feature Engine  
-**Last Completed Layer:** Layer 11 — Parallel Evidence Collection Node  
+**Current Active Layer:** Layer 13 — Historical LightGBM Risk Signal  
+**Last Completed Layer:** Layer 12 — Graph Feature Engine  
 **Current Blockers:** None
 
 > Update this file after every completed implementation layer.  
@@ -49,7 +49,7 @@ Stage A is complete when:
 - [x] Layer 9 — Fraud Investigation State Models
 - [x] Layer 10 — Evidence Model and Evidence Normalizer
 - [x] Layer 11 — Parallel Evidence Collection Node
-- [ ] Layer 12 — Graph Feature Engine
+- [x] Layer 12 — Graph Feature Engine
 
 ## Optional Enhancements
 

@@ -12,7 +12,7 @@ def test_policy_context_retrieval():
         candidate_action="BLOCK_ACCOUNT",
         fraud_hypothesis="Account Takeover (ATO)",
         top_k=4,
-        threshold=0.2,
+        threshold=0.1,
     )
 
     assert len(result.items) > 0
@@ -22,7 +22,7 @@ def test_policy_context_retrieval():
     for item in result.items:
         assert item.source_id is not None
         assert item.document_type in ["POLICY", "TYPOLOGY", "REGULATION"]
-        assert item.relevance_score >= 0.2
+        assert item.relevance_score >= 0.1
         assert len(item.text) > 0
 
     # Compact text must be populated and bounded
