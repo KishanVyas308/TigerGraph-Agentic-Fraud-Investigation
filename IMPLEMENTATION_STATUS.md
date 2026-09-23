@@ -76,7 +76,7 @@ Stage B is complete when one investigation can produce a normalized evidence bun
 - [x] Layer 16 — Main Fraud Reasoning Model
 - [x] Layer 17 — Evidence Sufficiency Engine
 - [x] Layer 18 — Evidence Planner / Value of Information
-- [ ] Layer 19 — Deterministic Policy Engine
+- [x] Layer 19 — Deterministic Policy Engine
 - [ ] Layer 20 — Human Approval State
 - [ ] Layer 21 — Mock Evidence and Action Services
 - [ ] Layer 22 — SAR / Report Generator
@@ -262,6 +262,7 @@ Layer 12 can be marked complete only when:
 - [x] Layer 16 — Main Fraud Reasoning Model
 - [x] Layer 17 — Evidence Sufficiency Engine
 - [x] Layer 18 — Evidence Planner / Value of Information
+- [x] Layer 19 — Deterministic Policy Engine
 
 - **Layer 18 Completed**:
   - Implemented `EvidencePlannerNode` in `backend/app/agents/nodes/evidence_planner.py` and `backend/app/agents/nodes/__init__.py`.
@@ -269,6 +270,14 @@ Layer 12 can be marked complete only when:
   - Supported typed evidence requests (`CUSTOMER_CONFIRMATION`, `STEP_UP_AUTH`, `ANALYST_INFORMATION`, `APPROVED_EXTERNAL_CHECK`).
   - Preserved pre-evidence next-best action (`pre_evidence_next_best_action`) and set `case_status = AWAITING_EVIDENCE`.
   - Added unit test suite `tests/unit/test_evidence_planner.py` (all passed).
+
+- **Layer 19 Completed**:
+  - Created `backend/app/policies/policy.yaml` and `config/policy.yaml` containing policy rules for all 13 `ActionType` options.
+  - Implemented policy loader in `backend/app/policies/loader.py` and deterministic `PolicyEngine` in `backend/app/policies/engine.py`.
+  - Implemented `PolicyGateNode` in `backend/app/agents/nodes/policy_gate.py` enforcing strict authorization boundaries over LLM recommendations.
+  - Determined `allowed`, `autonomous`, `approval_required`, `approval_role`, `report_required`, `unmet_prerequisites`, and `policy_reference`.
+  - Returned safe authorized fallbacks when recommendations violate risk bounds or lack required entity prerequisites.
+  - Added unit test suite `tests/unit/test_policy_engine.py` (all 7 tests passed).
 
 ---
 

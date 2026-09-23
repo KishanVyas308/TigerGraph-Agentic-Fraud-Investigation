@@ -1,0 +1,170 @@
+version: "1.0"
+policies:
+  ALLOW_TRANSACTION:
+    allowed: true
+    autonomous: true
+    approval_required: false
+    approval_role: "SYSTEM_AUTOMATIC"
+    report_required: false
+    min_risk_score: 0.0
+    max_risk_score: 0.70
+    required_prerequisites: []
+    policy_reference: "POL_003"
+    description: "Allow transaction when risk score is low to moderate and no critical fraud indicators exist."
+
+  BLOCK_TRANSACTION:
+    allowed: true
+    autonomous: true
+    approval_required: false
+    approval_role: "SYSTEM_AUTOMATIC"
+    report_required: false
+    min_risk_score: 0.60
+    max_risk_score: 1.00
+    required_prerequisites:
+      - "transaction_id"
+    policy_reference: "POL_001"
+    description: "Immediate block for transactions with confirmed fraud neighbor linkage or risk score > 0.90."
+
+  MONITOR_TRANSACTION:
+    allowed: true
+    autonomous: true
+    approval_required: false
+    approval_role: "SYSTEM_AUTOMATIC"
+    report_required: false
+    min_risk_score: 0.30
+    max_risk_score: 0.85
+    required_prerequisites:
+      - "transaction_id"
+    policy_reference: "POL_005"
+    description: "Place transaction on temporary watch when low-to-medium risk anomalies exist."
+
+  MONITOR_ACCOUNT:
+    allowed: true
+    autonomous: true
+    approval_required: false
+    approval_role: "SYSTEM_AUTOMATIC"
+    report_required: false
+    min_risk_score: 0.30
+    max_risk_score: 0.90
+    required_prerequisites:
+      - "account_ids"
+    policy_reference: "POL_005"
+    description: "Enhanced 72-hour transaction monitoring without customer access disruption."
+
+  BLOCK_ACCOUNT:
+    allowed: true
+    autonomous: false
+    approval_required: true
+    approval_role: "SENIOR_ANALYST"
+    report_required: false
+    min_risk_score: 0.75
+    max_risk_score: 1.00
+    required_prerequisites:
+      - "customer_id"
+      - "account_ids"
+    policy_reference: "POL_002"
+    description: "Account restriction requires senior analyst approval for multi-account device clusters."
+
+  WARN_CUSTOMER:
+    allowed: true
+    autonomous: true
+    approval_required: false
+    approval_role: "SYSTEM_AUTOMATIC"
+    report_required: false
+    min_risk_score: 0.30
+    max_risk_score: 0.75
+    required_prerequisites:
+      - "customer_id"
+    policy_reference: "POL_003"
+    description: "Issue warning notification to customer on unusual access patterns."
+
+  REQUEST_CUSTOMER_CONFIRMATION:
+    allowed: true
+    autonomous: true
+    approval_required: false
+    approval_role: "SYSTEM_AUTOMATIC"
+    report_required: false
+    min_risk_score: 0.40
+    max_risk_score: 0.85
+    required_prerequisites:
+      - "customer_id"
+    policy_reference: "POL_003"
+    description: "Automated SMS/Push transaction verification for moderate device novelty."
+
+  REQUEST_STEP_UP_AUTH:
+    allowed: true
+    autonomous: true
+    approval_required: false
+    approval_role: "SYSTEM_AUTOMATIC"
+    report_required: false
+    min_risk_score: 0.45
+    max_risk_score: 0.90
+    required_prerequisites:
+      - "customer_id"
+    policy_reference: "POL_003"
+    description: "Trigger step-up 2FA biometrics on novel device logins."
+
+  REQUEST_ANALYST_EVIDENCE:
+    allowed: true
+    autonomous: true
+    approval_required: false
+    approval_role: "SYSTEM_AUTOMATIC"
+    report_required: false
+    min_risk_score: 0.50
+    max_risk_score: 1.00
+    required_prerequisites:
+      - "case_id"
+    policy_reference: "POL_005"
+    description: "Request targeted evidence gathering from internal analyst queue."
+
+  ESCALATE_ANALYST:
+    allowed: true
+    autonomous: false
+    approval_required: true
+    approval_role: "ANALYST"
+    report_required: false
+    min_risk_score: 0.50
+    max_risk_score: 1.00
+    required_prerequisites:
+      - "case_id"
+    policy_reference: "POL_005"
+    description: "Escalate case to human analyst queue for manual review."
+
+  FILE_SAR:
+    allowed: true
+    autonomous: false
+    approval_required: true
+    approval_role: "COMPLIANCE_OFFICER"
+    report_required: true
+    min_risk_score: 0.80
+    max_risk_score: 1.00
+    required_prerequisites:
+      - "case_id"
+      - "customer_id"
+    policy_reference: "POL_004"
+    description: "File Suspicious Activity Report (SAR) for aggregate illicit flow > $5,000 or mule ring."
+
+  CLOSE_CASE:
+    allowed: true
+    autonomous: true
+    approval_required: false
+    approval_role: "SYSTEM_AUTOMATIC"
+    report_required: false
+    min_risk_score: 0.0
+    max_risk_score: 0.40
+    required_prerequisites:
+      - "case_id"
+    policy_reference: "GENERAL_CLOSE_POLICY"
+    description: "Close case when risk is low and evidence confirms benign activity."
+
+  NO_ACTION:
+    allowed: true
+    autonomous: true
+    approval_required: false
+    approval_role: "SYSTEM_AUTOMATIC"
+    report_required: false
+    min_risk_score: 0.0
+    max_risk_score: 1.00
+    required_prerequisites: []
+    policy_reference: "GENERAL_NO_ACTION_POLICY"
+    description: "No operational action taken."

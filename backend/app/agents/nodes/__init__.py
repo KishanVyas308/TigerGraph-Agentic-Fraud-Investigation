@@ -8,6 +8,7 @@ from backend.app.agents.nodes.evidence_planner import (
     CandidateEvidenceRequest,
     EvidencePlannerNode,
 )
+from backend.app.agents.nodes.policy_gate import PolicyGateNode
 from backend.app.agents.nodes.reasoning import MainReasoningNode
 from backend.app.agents.nodes.sufficiency_gate import (
     EvidenceSufficiencyGate,
@@ -24,4 +25,5 @@ __all__ = [
     "SufficiencyGateResult",
     "EvidencePlannerNode",
     "CandidateEvidenceRequest",
+    "PolicyGateNode",
 ]
