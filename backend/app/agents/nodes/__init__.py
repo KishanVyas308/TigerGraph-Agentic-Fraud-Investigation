@@ -5,9 +5,17 @@ from backend.app.agents.nodes.evidence_collection import (
     parallel_evidence_collection_node,
 )
 from backend.app.agents.nodes.reasoning import MainReasoningNode
+from backend.app.agents.nodes.sufficiency_gate import (
+    EvidenceSufficiencyGate,
+    SufficiencyGateResult,
+    SufficiencyOutcome,
+)
 
 __all__ = [
     "ParallelEvidenceCollectionNode",
     "parallel_evidence_collection_node",
     "MainReasoningNode",
+    "EvidenceSufficiencyGate",
+    "SufficiencyOutcome",
+    "SufficiencyGateResult",
 ]

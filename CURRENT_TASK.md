@@ -1,16 +1,16 @@
 # CURRENT_TASK.md — Active Implementation Task
 
 ## Current Active Layer
-**Layer 17 — Evidence Sufficiency Engine (Stage C — Reasoning + Control)**
+**Layer 18 — Evidence Planner / Value of Information (Stage C — Reasoning + Control)**
 
 ## Objective
-Implement the deterministic evidence sufficiency gate in `backend/app/agents/nodes/sufficiency_gate.py` that decides whether an investigation has enough evidence to take a defensible action or must request additional evidence.
+Implement the Evidence Planner service in `backend/app/agents/nodes/evidence_planner.py` that selects the smallest, highest-value evidence request (`CUSTOMER_CONFIRMATION`, `STEP_UP_AUTH`, `ANALYST_INFORMATION`, `APPROVED_EXTERNAL_CHECK`) using an explainable Value of Information (VoI) approximation: `(expected uncertainty reduction * expected decision impact) / cost_friction`.
 
 ## Acceptance Criteria
-- [ ] Evaluate sufficiency using risk, confidence, evidence completeness, missing evidence list, action severity, policy constraints, and iteration count.
-- [ ] Output one of 4 deterministic routing outcomes: `ACT`, `GATHER_MORE_EVIDENCE`, `ESCALATE`, or `STOP_NO_MATERIAL_FRAUD`.
-- [ ] Prevent infinite loops by enforcing configurable maximum iteration bounds (`max_iterations`).
-- [ ] Ensure decision rules are deterministic and configurable.
+- [ ] Select the highest-value missing evidence item from `state.missing_evidence`.
+- [ ] Before requesting additional evidence, preserve the current recommendation as `state.pre_evidence_next_best_action`.
+- [ ] Record why evidence is insufficient, what evidence is being requested, and what decision the evidence could change.
+- [ ] Support typed evidence requests (`CUSTOMER_CONFIRMATION`, `STEP_UP_AUTH`, `ANALYST_INFORMATION`, `APPROVED_EXTERNAL_CHECK`).
 - [ ] Unit tests pass with 100% success.
 
 ## Previous Completed Layers
@@ -31,3 +31,4 @@ Implement the deterministic evidence sufficiency gate in `backend/app/agents/nod
 - Layer 14 — Laya Fast Classifier
 - Layer 15 — LLM Provider Router
 - Layer 16 — Main Fraud Reasoning Model
+- Layer 17 — Evidence Sufficiency Engine
