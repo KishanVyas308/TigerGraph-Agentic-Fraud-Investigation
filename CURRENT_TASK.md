@@ -1,17 +1,15 @@
 # CURRENT_TASK.md — Active Implementation Task
 
 ## Current Active Layer
-**Layer 20 — Human Approval State (Stage C — Reasoning + Control)**
+**Layer 21 — Mock Evidence and Action Services (Stage C — Reasoning + Control)**
 
 ## Objective
-Implement human approval workflow semantics using LangGraph interrupts/resumes for governed actions (`BLOCK_ACCOUNT`, `FILE_SAR`, sensitive escalations). Support analyst actions: `APPROVE`, `REJECT`, and `MODIFY`.
+Implement simulated action execution services (`execution_mode = SIMULATED`) for allowed banking actions (transaction allow/block, account freeze/block, customer warnings/SMS confirmation, step-up 2FA biometrics, escalation, CRM updates). Ensure all simulated executions produce explicit mock audit records without implying changes to real banking systems.
 
 ## Acceptance Criteria
-- [ ] Support analyst decision outcomes: `APPROVE`, `REJECT`, `MODIFY`.
-- [ ] On `APPROVE`, proceed with authorized action.
-- [ ] On `REJECT`, record rejection and return to safe action selection / monitoring.
-- [ ] On `MODIFY`, re-run modified action through policy validation.
-- [ ] Preserve all analyst decisions in the case timeline.
+- [ ] Implement simulated mock services for all permitted hackathon actions.
+- [ ] Explicitly tag all mock execution results with `execution_mode = SIMULATED`.
+- [ ] Ingest simulated evidence responses into `state.received_evidence` upon customer confirmation or step-up authentication.
 - [ ] Unit tests pass with 100% success.
 
 ## Previous Completed Layers
@@ -35,3 +33,4 @@ Implement human approval workflow semantics using LangGraph interrupts/resumes f
 - Layer 17 — Evidence Sufficiency Engine
 - Layer 18 — Evidence Planner / Value of Information
 - Layer 19 — Deterministic Policy Engine
+- Layer 20 — Human Approval State

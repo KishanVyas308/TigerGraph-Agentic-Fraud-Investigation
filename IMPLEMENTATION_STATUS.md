@@ -77,7 +77,7 @@ Stage B is complete when one investigation can produce a normalized evidence bun
 - [x] Layer 17 — Evidence Sufficiency Engine
 - [x] Layer 18 — Evidence Planner / Value of Information
 - [x] Layer 19 — Deterministic Policy Engine
-- [ ] Layer 20 — Human Approval State
+- [x] Layer 20 — Human Approval State
 - [ ] Layer 21 — Mock Evidence and Action Services
 - [ ] Layer 22 — SAR / Report Generator
 - [ ] Layer 23 — Case Finalizer and Stop Conditions
@@ -263,6 +263,7 @@ Layer 12 can be marked complete only when:
 - [x] Layer 17 — Evidence Sufficiency Engine
 - [x] Layer 18 — Evidence Planner / Value of Information
 - [x] Layer 19 — Deterministic Policy Engine
+- [x] Layer 20 — Human Approval State
 
 - **Layer 18 Completed**:
   - Implemented `EvidencePlannerNode` in `backend/app/agents/nodes/evidence_planner.py` and `backend/app/agents/nodes/__init__.py`.
@@ -278,6 +279,14 @@ Layer 12 can be marked complete only when:
   - Determined `allowed`, `autonomous`, `approval_required`, `approval_role`, `report_required`, `unmet_prerequisites`, and `policy_reference`.
   - Returned safe authorized fallbacks when recommendations violate risk bounds or lack required entity prerequisites.
   - Added unit test suite `tests/unit/test_policy_engine.py` (all 7 tests passed).
+
+- **Layer 20 Completed**:
+  - Implemented `ApprovalRequest` model and `process_analyst_decision` function in `backend/app/actions/approval.py`.
+  - Supported analyst decision outcomes: `APPROVE`, `REJECT`, and `MODIFY`.
+  - Implemented `HumanApprovalNode` in `backend/app/agents/nodes/human_approval.py` for LangGraph pause/resume transitions.
+  - Re-evaluated modified actions through `PolicyEngine` upon `MODIFY` decisions, and selected safe monitoring fallbacks on `REJECT`.
+  - Preserved reviewer ID, role, comments, and decision outcomes in case timeline history.
+  - Added unit test suite `tests/unit/test_human_approval.py` (all 5 tests passed).
 
 ---
 
