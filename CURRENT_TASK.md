@@ -1,17 +1,16 @@
 # CURRENT_TASK.md — Active Implementation Task
 
 ## Current Active Layer
-**Layer 13 — Historical LightGBM Risk Signal (Stage B Optional Signal)**
+**Layer 14 — Laya Fast Classifier (Stage B Optional Signal)**
 
 ## Objective
-Implement optional historical ML risk scoring model in `backend/app/features/lightgbm_signal.py` that computes `historical_ml_score` (0.0 to 1.0) from deterministic graph features and transaction attributes as a supporting signal without being treated as final ground truth.
+Implement optional Laya local classifier wrapper in `backend/app/models/laya_classifier.py` for lightweight local routing/classification (trigger classification, customer response classification, analyst response classification) with feature flag control and deterministic fallback.
 
 ## Acceptance Criteria
-- [ ] Implement LightGBM risk model wrapper with graceful fallback when LightGBM model weights are not loaded.
-- [ ] Output `historical_ml_score` bounded between 0.0 and 1.0.
-- [ ] Do NOT name the field `is_fraud` or treat it as final fraud probability unless calibrated.
-- [ ] Fallback gracefully when LightGBM package or model artifact is missing or unavailable.
-- [ ] Unit tests pass cleanly.
+- [ ] Implement fast classification wrapper supporting trigger classification, customer response, and analyst response.
+- [ ] Strictly restrict Laya from making final fraud decisions, deciding account blocking, or voting over evidence items.
+- [ ] Feature-flagged control (`ENABLE_LAYA: bool = False`) with graceful fallback to deterministic parsing or main LLM when disabled or unconfident.
+- [ ] Unit tests pass with 100% success.
 
 ## Previous Completed Layers
 - Layer 0 — Repository Bootstrap and Local Configuration
@@ -27,3 +26,4 @@ Implement optional historical ML risk scoring model in `backend/app/features/lig
 - Layer 10 — Evidence Model and Evidence Normalizer
 - Layer 11 — Parallel Evidence Collection Node
 - Layer 12 — Graph Feature Engine
+- Layer 13 — Historical LightGBM Risk Signal

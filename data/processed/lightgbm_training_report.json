@@ -1,0 +1,73 @@
+{
+  "model_version": "lightgbm_v1.0",
+  "random_state": 42,
+  "num_samples": 30,
+  "num_features": 23,
+  "feature_names": [
+    "shared_device_account_count",
+    "shared_device_customer_count",
+    "fraud_accounts_on_device",
+    "shared_ip_account_count",
+    "shared_ip_customer_count",
+    "fraud_neighbors_count",
+    "shortest_distance_to_fraud",
+    "connected_component_size",
+    "community_size",
+    "transaction_count_5m",
+    "transaction_count_10m",
+    "transaction_count_1h",
+    "transaction_count_24h",
+    "transaction_amount_ratio_to_mean",
+    "transaction_amount_ratio_to_median",
+    "new_device",
+    "new_ip",
+    "new_merchant",
+    "fan_in_count",
+    "fan_out_count",
+    "cycle_detected",
+    "rapid_pass_through",
+    "bank_risk_score"
+  ],
+  "metrics": {
+    "precision": 0.625,
+    "recall": 1.0,
+    "f1_score": 0.7692,
+    "roc_auc": 0.5,
+    "confusion_matrix": [
+      [
+        0,
+        3
+      ],
+      [
+        0,
+        5
+      ]
+    ]
+  },
+  "feature_importance": {
+    "shared_device_account_count": 0.0,
+    "shared_device_customer_count": 0.0,
+    "fraud_accounts_on_device": 0.0,
+    "shared_ip_account_count": 0.0,
+    "shared_ip_customer_count": 0.0,
+    "fraud_neighbors_count": 0.0,
+    "shortest_distance_to_fraud": 0.0,
+    "connected_component_size": 0.0,
+    "community_size": 0.0,
+    "transaction_count_5m": 0.0,
+    "transaction_count_10m": 0.0,
+    "transaction_count_1h": 0.0,
+    "transaction_count_24h": 0.0,
+    "transaction_amount_ratio_to_mean": 0.0,
+    "transaction_amount_ratio_to_median": 0.0,
+    "new_device": 0.0,
+    "new_ip": 0.0,
+    "new_merchant": 0.0,
+    "fan_in_count": 0.0,
+    "fan_out_count": 0.0,
+    "cycle_detected": 0.0,
+    "rapid_pass_through": 0.0,
+    "bank_risk_score": 0.0
+  },
+  "benchmark_isolation_verified": true
+}
