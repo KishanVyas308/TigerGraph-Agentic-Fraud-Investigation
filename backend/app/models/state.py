@@ -93,8 +93,11 @@ class ApprovalStatus(str, Enum):
 class ApprovalRole(str, Enum):
     """Required approval role for governed actions."""
     ANALYST = "ANALYST"
+    FRAUD_ANALYST = "FRAUD_ANALYST"
     SENIOR_ANALYST = "SENIOR_ANALYST"
+    SENIOR_FRAUD_ANALYST = "SENIOR_FRAUD_ANALYST"
     FRAUD_MANAGER = "FRAUD_MANAGER"
+    FRAUD_SUPERVISOR = "FRAUD_SUPERVISOR"
     COMPLIANCE_OFFICER = "COMPLIANCE_OFFICER"
     SYSTEM_AUTOMATIC = "SYSTEM_AUTOMATIC"
 
@@ -333,11 +336,19 @@ class FraudCaseState(BaseModel):
     approval_status: Optional[ApprovalStatus] = None
     approval_decisions: List[ApprovalDecision] = Field(default_factory=list)
     executed_actions: List[ActionExecution] = Field(default_factory=list)
+    sar_reference: Optional[str] = None
+    sar_report: Optional[Dict[str, Any]] = None
 
     # 6. Case Control
     case_status: CaseStatus = CaseStatus.OPEN
     iteration_count: int = 0
     stop_reason: Optional[StopReason] = None
+    case_summary: Optional[str] = None
+    final_summary: Optional[Dict[str, Any]] = None
+    is_persisted: bool = False
+    case_memory_id: Optional[str] = None
+    is_indexed: bool = False
+    embedding_id: Optional[str] = None
     timeline: List[TimelineEvent] = Field(default_factory=list)
 
     @field_validator("risk_score", "confidence", "evidence_completeness", mode="before")
@@ -573,6 +584,12 @@ def merge_fraud_case_state(
                 updated_state.executed_actions.append(exec_item)
                 existing_exec_ids.add(exec_item.execution_id)
 
+    if patch_dict.get("sar_reference") is not None:
+        updated_state.sar_reference = patch_dict["sar_reference"]
+
+    if patch_dict.get("sar_report") is not None:
+        updated_state.sar_report = patch_dict["sar_report"]
+
     # 6. Case Control updates
     if patch_dict.get("case_status") is not None:
         updated_state.case_status = patch_dict["case_status"]
@@ -582,6 +599,24 @@ def merge_fraud_case_state(
 
     if patch_dict.get("stop_reason") is not None:
         updated_state.stop_reason = patch_dict["stop_reason"]
+
+    if patch_dict.get("case_summary") is not None:
+        updated_state.case_summary = patch_dict["case_summary"]
+
+    if patch_dict.get("final_summary") is not None:
+        updated_state.final_summary = patch_dict["final_summary"]
+
+    if patch_dict.get("is_persisted") is not None:
+        updated_state.is_persisted = bool(patch_dict["is_persisted"])
+
+    if patch_dict.get("case_memory_id") is not None:
+        updated_state.case_memory_id = patch_dict["case_memory_id"]
+
+    if patch_dict.get("is_indexed") is not None:
+        updated_state.is_indexed = bool(patch_dict["is_indexed"])
+
+    if patch_dict.get("embedding_id") is not None:
+        updated_state.embedding_id = patch_dict["embedding_id"]
 
     if "timeline" in patch_dict and patch_dict["timeline"]:
         existing_evt_ids = {t.event_id for t in updated_state.timeline}

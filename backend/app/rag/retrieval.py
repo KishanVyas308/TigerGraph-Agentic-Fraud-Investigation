@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from backend.app.config import get_settings
 from backend.app.graph.tigergraph_client import TigerGraphClient
-from backend.app.rag.case_memory import CaseMemoryIndex
+from backend.app.rag.case_memory import CaseMemoryIndex, is_benchmark_case
 from backend.app.rag.policy_index import PolicyVectorIndex
 from backend.app.utils.logging import get_logger
 
@@ -93,6 +93,14 @@ class GraphRAGRetrievalService:
                     self.case_memory_index.load_from_parquet(case_path)
                 except Exception as exc:
                     logger.warning("Could not load case memory index from %s: %s", case_path, exc)
+
+    def reload_case_memory(self, case_memory_path: Optional[Path] = None) -> int:
+        """Reload case memory index from disk to pick up newly indexed cases."""
+        target_path = case_memory_path or (self.data_dir / "case_memory_index.parquet")
+        if target_path.exists():
+            self.case_memory_index.load_from_parquet(target_path)
+            logger.info("Reloaded case memory index from %s (%d records)", target_path, len(self.case_memory_index.records))
+        return len(self.case_memory_index.records)
 
     def retrieve_policy_context(
         self,
@@ -218,7 +226,7 @@ class GraphRAGRetrievalService:
                 )
                 for c in tg_cases:
                     cid = c.get("case_id")
-                    if cid and not cid.startswith("CASE_"):
+                    if cid and not is_benchmark_case(cid) and cid != target_case_id:
                         graph_matches[cid] = c
             except Exception as exc:
                 logger.warning("Graph case retrieval fallback: %s", exc)
@@ -233,7 +241,7 @@ class GraphRAGRetrievalService:
                 )
                 for r in v_results:
                     cid = r.get("case_id")
-                    if cid and not cid.startswith("CASE_"):
+                    if cid and not is_benchmark_case(cid) and cid != target_case_id:
                         vector_matches[cid] = r
             except Exception as exc:
                 logger.warning("Vector case memory search fallback: %s", exc)
@@ -243,8 +251,8 @@ class GraphRAGRetrievalService:
         scored_candidates: List[SimilarCaseItem] = []
 
         for cid in all_case_ids:
-            # Benchmark isolation: strictly exclude CASE_###
-            if cid.startswith("CASE_"):
+            # Benchmark isolation: strictly exclude benchmark cases (CASE_001 to CASE_020) and self
+            if is_benchmark_case(cid) or cid == target_case_id:
                 continue
 
             g_data = graph_matches.get(cid)

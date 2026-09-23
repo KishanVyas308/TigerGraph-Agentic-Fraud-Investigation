@@ -41,6 +41,19 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    from backend.app.api.routes import (
+        benchmark_router,
+        cases_router,
+        investigations_router,
+        mock_router,
+    )
+
+    # Register API routers
+    app.include_router(investigations_router, prefix="/api/investigations", tags=["Investigations"])
+    app.include_router(cases_router, prefix="/api/cases", tags=["Cases"])
+    app.include_router(mock_router, prefix="/api/mock", tags=["Mock Actions"])
+    app.include_router(benchmark_router, prefix="/api/benchmark", tags=["Benchmark"])
+
     @app.get("/health", tags=["Health"])
     async def health_check() -> Dict[str, str]:
         """Health check endpoint confirming application is running."""

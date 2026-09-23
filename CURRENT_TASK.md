@@ -1,16 +1,31 @@
 # CURRENT_TASK.md — Active Implementation Task
 
 ## Current Active Layer
-**Layer 21 — Mock Evidence and Action Services (Stage C — Reasoning + Control)**
+**Layer 35 — Unit Test Suite (Stage E — Quality, Benchmark, and Demo)**
 
 ## Objective
-Implement simulated action execution services (`execution_mode = SIMULATED`) for allowed banking actions (transaction allow/block, account freeze/block, customer warnings/SMS confirmation, step-up 2FA biometrics, escalation, CRM updates). Ensure all simulated executions produce explicit mock audit records without implying changes to real banking systems.
+Establish a comprehensive, consolidated, network-free unit test suite using `pytest` covering all core deterministic logic across the fraud investigation engine:
+1. Evidence normalization and provenance verification.
+2. Fraud graph feature engine calculations and boundary conditions.
+3. Policy engine deterministic authorization, rules, prerequisites, and approval roles.
+4. Evidence sufficiency gate decisions across risk, confidence, and completeness dimensions.
+5. Evidence planner / Value of Information ranking and friction penalties.
+6. State validation and transitions for `FraudCaseState`.
+7. Action simulator and mock services.
+8. LLM structured-output parsing, schema validation, and fallback routing logic.
 
 ## Acceptance Criteria
-- [ ] Implement simulated mock services for all permitted hackathon actions.
-- [ ] Explicitly tag all mock execution results with `execution_mode = SIMULATED`.
-- [ ] Ingest simulated evidence responses into `state.received_evidence` upon customer confirmation or step-up authentication.
-- [ ] Unit tests pass with 100% success.
+- [ ] Create/consolidate unit test modules under `tests/unit/` covering:
+  - Evidence normalization (`test_evidence_normalizer.py`),
+  - Graph features (`test_graph_feature_engine.py`),
+  - Policy engine rules (`test_policy_engine.py`),
+  - Sufficiency gate logic (`test_sufficiency_gate.py`),
+  - Evidence planner ranking (`test_evidence_planner.py`),
+  - State schemas & transitions (`test_fraud_state.py`),
+  - Action simulation & mocks (`test_action_mocks.py`),
+  - Router, provider parsing & fallback (`test_provider_router.py`).
+- [ ] Strict mocking of TigerGraph and external LLM APIs (100% offline, zero network access required).
+- [ ] Maintain clean execution and high test assertion coverage.
 
 ## Previous Completed Layers
 - Layer 0 — Repository Bootstrap and Local Configuration
@@ -34,3 +49,17 @@ Implement simulated action execution services (`execution_mode = SIMULATED`) for
 - Layer 18 — Evidence Planner / Value of Information
 - Layer 19 — Deterministic Policy Engine
 - Layer 20 — Human Approval State
+- Layer 21 — Mock Evidence and Action Services
+- Layer 22 — SAR / Report Generator
+- Layer 23 — Case Finalizer and Stop Conditions
+- Layer 24 — Case Memory Writer
+- Layer 25 — Case Summary Embedding and Future Retrieval
+- Layer 26 — Complete LangGraph Workflow
+- Layer 27 — FastAPI Application Layer
+- Layer 28 — Frontend Foundation
+- Layer 29 — Live Investigation Timeline via SSE
+- Layer 30 — Fraud Graph Visualization
+- Layer 31 — Evidence and Assessment UI
+- Layer 32 — Next-Best Action and Approval UI
+- Layer 33 — Similar Cases and Policy UI
+- Layer 34 — Local Audit Trail and Observability

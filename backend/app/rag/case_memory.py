@@ -1,5 +1,6 @@
 """Historical Case Memory Index for GraphRAG Precedent Retrieval."""
 
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 import polars as pl
@@ -10,6 +11,18 @@ from backend.app.rag.embeddings import compute_embedding, cosine_similarity
 from backend.app.utils.logging import get_logger
 
 logger = get_logger("rag.case_memory")
+
+BENCHMARK_CASE_IDS = {f"CASE_{i:03d}" for i in range(1, 21)}
+
+
+def is_benchmark_case(case_id: Optional[str]) -> bool:
+    """Check if a case ID corresponds to the 20 benchmark test cases (CASE_001 to CASE_020)."""
+    if not case_id:
+        return False
+    cid = case_id.strip()
+    if cid in BENCHMARK_CASE_IDS:
+        return True
+    return bool(re.match(r"^CASE_0*(?:[1-9]|1\d|20)$", cid, re.IGNORECASE))
 
 
 class CaseMemoryRecord(BaseModel):
@@ -28,12 +41,43 @@ class CaseMemoryIndex:
     def __init__(self):
         self._records: List[CaseMemoryRecord] = []
 
+    @property
+    def records(self) -> List[CaseMemoryRecord]:
+        """Return shallow copy of indexed records."""
+        return list(self._records)
+
+    def get_record(self, case_id: str) -> Optional[CaseMemoryRecord]:
+        """Fetch indexed record by case_id."""
+        for r in self._records:
+            if r.case_id == case_id:
+                return r
+        return None
+
+    def upsert_record(self, record: CaseMemoryRecord) -> bool:
+        """Insert or update a case memory record while enforcing benchmark quarantine.
+
+        Returns True if indexed, False if quarantined.
+        """
+        if is_benchmark_case(record.case_id):
+            logger.warning("Quarantine: Cannot index benchmark case %s into case memory.", record.case_id)
+            return False
+
+        for idx, existing in enumerate(self._records):
+            if existing.case_id == record.case_id:
+                self._records[idx] = record
+                logger.info("Updated existing case memory record for %s", record.case_id)
+                return True
+
+        self._records.append(record)
+        logger.info("Appended new case memory record for %s (total: %d)", record.case_id, len(self._records))
+        return True
+
     def add_cases(self, case_chunks: List[RAGChunk]) -> None:
         """Embed and index historical case chunks."""
         logger.info("Indexing %d historical case chunks into CaseMemoryIndex...", len(case_chunks))
         for chunk in case_chunks:
             # Strictly prevent benchmark leakage
-            if chunk.source_id.startswith("CASE_"):
+            if is_benchmark_case(chunk.source_id):
                 logger.warning("Skipping benchmark case ID from case memory index: %s", chunk.source_id)
                 continue
 

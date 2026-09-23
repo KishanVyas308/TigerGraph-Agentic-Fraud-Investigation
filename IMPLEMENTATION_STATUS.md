@@ -7,10 +7,10 @@
 ## Overall Status
 
 **Status:** In Progress  
-**Completed Layers:** 18 / 41  
-**Current Stage:** Stage C — Reasoning + Control  
-**Current Active Layer:** Layer 18 — Evidence Planner / Value of Information  
-**Last Completed Layer:** Layer 17 — Evidence Sufficiency Engine  
+**Completed Layers:** 34 / 41  
+**Current Stage:** Stage E — Quality, Benchmark, and Demo  
+**Current Active Layer:** Layer 35 — Unit Test Suite  
+**Last Completed Layer:** Layer 34 — Local Audit Trail and Observability  
 **Current Blockers:** None
 
 > Update this file after every completed implementation layer.  
@@ -78,12 +78,12 @@ Stage B is complete when one investigation can produce a normalized evidence bun
 - [x] Layer 18 — Evidence Planner / Value of Information
 - [x] Layer 19 — Deterministic Policy Engine
 - [x] Layer 20 — Human Approval State
-- [ ] Layer 21 — Mock Evidence and Action Services
-- [ ] Layer 22 — SAR / Report Generator
-- [ ] Layer 23 — Case Finalizer and Stop Conditions
-- [ ] Layer 24 — Case Memory Writer
-- [ ] Layer 25 — Case Summary Embedding and Future Retrieval
-- [ ] Layer 26 — Complete LangGraph Workflow
+- [x] Layer 21 — Mock Evidence and Action Services
+- [x] Layer 22 — SAR / Report Generator
+- [x] Layer 23 — Case Finalizer and Stop Conditions
+- [x] Layer 24 — Case Memory Writer
+- [x] Layer 25 — Case Summary Embedding and Future Retrieval
+- [x] Layer 26 — Complete LangGraph Workflow
 
 ## Stage C Exit Criteria
 
@@ -110,14 +110,14 @@ The same workflow must support both fraud and cleared cases.
 
 # Stage D — API + Analyst UI
 
-- [ ] Layer 27 — FastAPI Application Layer
-- [ ] Layer 28 — Frontend Foundation
-- [ ] Layer 29 — Live Investigation Timeline via SSE
-- [ ] Layer 30 — Fraud Graph Visualization
-- [ ] Layer 31 — Evidence and Assessment UI
-- [ ] Layer 32 — Next-Best Action and Approval UI
-- [ ] Layer 33 — Similar Cases and Policy UI
-- [ ] Layer 34 — Local Audit Trail and Observability
+- [x] Layer 27 — FastAPI Application Layer
+- [x] Layer 28 — Frontend Foundation
+- [x] Layer 29 — Live Investigation Timeline via SSE
+- [x] Layer 30 — Fraud Graph Visualization
+- [x] Layer 31 — Evidence and Assessment UI
+- [x] Layer 32 — Next-Best Action and Approval UI
+- [x] Layer 33 — Similar Cases and Policy UI
+- [x] Layer 34 — Local Audit Trail and Observability
 
 ## Stage D Exit Criteria
 
@@ -162,25 +162,31 @@ Stage E is complete when:
 
 ## Active Layer
 
-**Layer 12 — Graph Feature Engine**
+**Layer 35 — Unit Test Suite**
 
 ## Goal
 
-Produce typed `FraudFeatureSet` metrics (shared devices, shared IPs, fraud neighbors, shortest distance to fraud, connected cluster size, transaction velocity windows, amount deviation ratios, fan-in/fan-out, cycles, rapid pass-through) from normalized evidence and GSQL outputs without using an LLM.
+Establish a comprehensive, consolidated, network-free unit test suite using `pytest` covering all core deterministic logic across the fraud investigation engine: evidence normalization, graph features, policy authorization, sufficiency decisions, evidence planner (Value of Information), state schemas, action mocks, and provider router / parsing logic.
 
 ## Required Deliverables
 
-- `backend/app/features/engine.py`
-- `tests/unit/test_feature_engine.py`
+- `tests/unit/test_evidence_normalizer.py`
+- `tests/unit/test_graph_feature_engine.py`
+- `tests/unit/test_policy_engine.py`
+- `tests/unit/test_sufficiency_gate.py`
+- `tests/unit/test_evidence_planner.py`
+- `tests/unit/test_fraud_state.py`
+- `tests/unit/test_action_mocks.py`
+- `tests/unit/test_provider_router.py`
 
 ## Completion Criteria
 
-Layer 12 can be marked complete only when:
+Layer 35 can be marked complete only when:
 
-- deterministic graph, behavioral, money flow, and device/identity features are calculated from normalized evidence and GSQL query results,
-- missing features retain `None` / null values without inventing zero metrics or hallucinated defaults,
-- every non-null feature includes a clear human-readable explanation,
-- unit tests pass with 100% success.
+- all deterministic components are independently unit-tested,
+- TigerGraph and external LLM APIs are strictly mocked,
+- tests run 100% offline with zero external network access,
+- high assertion coverage is achieved across edge cases and error states.
 
 ---
 
@@ -287,6 +293,121 @@ Layer 12 can be marked complete only when:
   - Re-evaluated modified actions through `PolicyEngine` upon `MODIFY` decisions, and selected safe monitoring fallbacks on `REJECT`.
   - Preserved reviewer ID, role, comments, and decision outcomes in case timeline history.
   - Added unit test suite `tests/unit/test_human_approval.py` (all 5 tests passed).
+
+- **Layer 21 Completed**:
+  - Implemented base action execution interface and typed `SimulatedActionResult` in `backend/app/actions/base.py`.
+  - Implemented mock evidence services in `backend/app/actions/mocks.py`: `MockCustomerConfirmationService` (SMS/Push authorization), `MockStepUpAuthService` (biometric/OTP challenges), `MockAnalystEvidenceService` (supplemental notes), and `MockExternalReputationService` (IP/threat intelligence).
+  - Implemented `MockActionExecutionService` covering all 13 `ActionType` operations (`ALLOW_TRANSACTION`, `BLOCK_TRANSACTION`, `MONITOR_TRANSACTION`, `MONITOR_ACCOUNT`, `BLOCK_ACCOUNT`, `WARN_CUSTOMER`, `REQUEST_CUSTOMER_CONFIRMATION`, `REQUEST_STEP_UP_AUTH`, `REQUEST_ANALYST_EVIDENCE`, `ESCALATE_ANALYST`, `FILE_SAR`, `CLOSE_CASE`, `NO_ACTION`).
+  - Enforced `execution_mode = SIMULATED` and included simulation audit disclaimers across all simulated actions.
+  - Implemented `ingest_mock_evidence` helper normalizing and appending evidence to `received_evidence` while transitioning `case_status` from `AWAITING_EVIDENCE` to `IN_PROGRESS`.
+  - Implemented LangGraph `ActionExecutorNode` in `backend/app/agents/nodes/action_executor.py` managing deferred approvals, autonomous execution, and case lifecycle transitions.
+  - Added unit test suite `tests/unit/test_mock_actions.py` (all 16 tests passing).
+
+- **Layer 22 Completed**:
+  - Added `sar_reference` and `sar_report` fields to `FraudCaseState` and updated `merge_fraud_case_state` reducer in `backend/app/models/state.py`.
+  - Implemented typed Pydantic models `SARSubject`, `SARSuspiciousActivity`, `SARNarrative`, and `SARReport` in `backend/app/reporting/sar_generator.py`.
+  - Implemented `SARGenerator` and `generate_case_sar` producing verified evidence-grounded reports with a structured 5-part narrative citing specific `[evidence_id]` tokens.
+  - Prevented hallucination by representing missing fields strictly as `NOT_AVAILABLE` or null.
+  - Implemented disk export generating formatted JSON (`.json`) and Markdown (`.md`) reports under `outputs/sar/` with safety simulation disclaimers.
+  - Appended auditable `SAR_REPORT_GENERATED` timeline milestones and linked `sar_reference` into case memory.
+  - Added unit test suite `tests/unit/test_sar_generator.py` (all tests passing).
+
+- **Layer 23 Completed**:
+  - Added `case_summary` and `final_summary` fields to `FraudCaseState` and updated `merge_fraud_case_state` reducer in `backend/app/models/state.py`.
+  - Implemented `ValidationResult` and `FinalCaseSummary` schemas in `backend/app/schemas/case.py` and exported them in `backend/app/schemas/__init__.py`.
+  - Implemented `CaseFinalizer` service in `backend/app/services/finalizer.py` enforcing explicit `StopReason` resolution, integrity validation, and synthesis of human-auditable case summaries.
+  - Implemented `FinalizerNode` in `backend/app/agents/nodes/finalizer.py` coordinating case completion within the LangGraph lifecycle.
+  - Ensured no case terminates silently without an explicit stop reason and properly preserved pre/post evidence recommendations.
+  - Added unit test suite `tests/unit/test_case_finalizer.py` (all tests passing).
+
+- **Layer 24 Completed**:
+  - Added `is_persisted` and `case_memory_id` fields to `FraudCaseState` and updated `merge_fraud_case_state` reducer in `backend/app/models/state.py`.
+  - Implemented `CaseMemoryReceipt` schema and `CaseMemoryWriter` service in `backend/app/services/case_memory_writer.py`.
+  - Persisted `FraudCase`, `Evidence`, `Decision` (strictly preserving pre-evidence and post-evidence recommendations without overwriting), `Action`, `Approval`, and entity linkages (`Transaction`, `Account`, `Device`, `IPAddress`) into TigerGraph graph memory.
+  - Added LangGraph `MemoryWriterNode` in `backend/app/agents/nodes/memory_writer.py` and exported in `backend/app/agents/nodes/__init__.py`.
+  - Added unit test suite `tests/unit/test_case_memory_writer.py` (all tests passing).
+
+- **Layer 25 Completed**:
+  - Added `is_indexed` and `embedding_id` fields to `FraudCaseState` and updated `merge_fraud_case_state` reducer in `backend/app/models/state.py`.
+  - Implemented `is_benchmark_case` helper quarantining benchmark cases (`CASE_001` to `CASE_020`) from leaking into precedent memory in `backend/app/rag/case_memory.py`.
+  - Extended `CaseMemoryIndex` with `records`, `get_record`, and `upsert_record` methods.
+  - Implemented `CaseIndexingReceipt` and `CaseMemoryIndexer` service in `backend/app/rag/case_indexer.py` generating grounded case summaries, computing 384-dimensional SentenceTransformer embeddings, and persisting to `case_memory_index.parquet`.
+  - Updated `GraphRAGRetrievalService` in `backend/app/rag/retrieval.py` with `reload_case_memory` and isolated benchmark case filtering to enable dynamic precedent retrieval of newly indexed cases.
+  - Implemented LangGraph `CaseSummaryEmbedderNode` in `backend/app/agents/nodes/case_indexer.py` and exported in `backend/app/agents/nodes/__init__.py`.
+  - Added unit test suite `tests/unit/test_case_indexer.py` (all 7 tests covering summary synthesis, embedding computation, Parquet persistence, quarantine, dynamic retrieval, async node processing, and reducer merge).
+
+- **Layer 26 Completed (Stage C Milestone Complete)**:
+  - Implemented intake nodes in `backend/app/agents/nodes/intake.py`: `ValidateTriggerNode`, `LoadOrCreateCaseNode`, `TriggerClassifierNode`, `PersistCaseStartNode`.
+  - Implemented evidence loop and action resolution nodes in `backend/app/agents/nodes/evidence_loop.py`: `RecordPreEvidenceNBANode`, `RequestEvidenceNode`, `IngestEvidenceNode`, `DetermineNextBestActionNode`, `ReportIfRequiredNode`.
+  - Exported all intake and loop nodes in `backend/app/agents/nodes/__init__.py`.
+  - Implemented `InvestigationWorkflowBuilder` and `CompiledInvestigationWorkflow` state machine in `backend/app/agents/graph.py` with conditional routing (`route_sufficiency_gate`, `route_policy_gate`), bounded evidence iteration loops (`max_iterations = 2`), and human-in-the-loop interrupt/resume semantics (`AWAITING_APPROVAL`).
+  - Exported graph orchestrator functions in `backend/app/agents/__init__.py`: `InvestigationWorkflowBuilder`, `create_investigation_graph`, `investigate_case`.
+  - Added unit and integration test suite `tests/unit/test_investigation_workflow.py` (all 6 tests covering confirmed fraud flow, benign false-positive flow, bounded evidence loops, human approval interrupt/resume, and conditional routing).
+  - Verified Stage C Exit Criteria: Full end-to-end investigation pipeline successfully operates locally across all fraud and cleared scenarios.
+
+- **Layer 27 Completed**:
+  - Implemented typed Pydantic API schemas in `backend/app/schemas/api.py` and exported in `backend/app/schemas/__init__.py`: `TriggerInvestigationRequest`, `SubmitEvidenceRequest`, `ApprovalActionRequest`, `ModifyActionRequest`, `MockConfirmationRequest`, `MockStepUpRequest`, `BenchmarkRunRequest`, `InvestigationResponse`, `CaseQueueItem`, `CaseQueueResponse`, `GraphVisualizationResponse`, `EvidenceListResponse`, `BenchmarkRunResponse`.
+  - Implemented `InvestigationService` in `backend/app/services/investigation_service.py` managing investigation lifecycle, in-memory cache, Cytoscape.js graph element generation, evidence card formatting, analyst approval transitions, and Server-Sent Events (SSE) streaming.
+  - Implemented route dependencies in `backend/app/api/dependencies.py`: `get_investigation_service_dep`, `get_tigergraph_client_dep`, `get_policy_engine_dep`.
+  - Implemented thin route handlers across 4 modular routers:
+    - `backend/app/api/routes/investigations.py`: `POST /api/investigations`, `GET /api/investigations/{case_id}`, `GET /api/investigations/{case_id}/events` (SSE), `GET /api/investigations/{case_id}/graph`, `GET /api/investigations/{case_id}/evidence`, `POST /api/investigations/{case_id}/evidence`, `POST /api/investigations/{case_id}/approve`, `POST /api/investigations/{case_id}/reject`, `POST /api/investigations/{case_id}/modify-action`.
+    - `backend/app/api/routes/cases.py`: `GET /api/cases`, `GET /api/cases/{case_id}`.
+    - `backend/app/api/routes/mock_actions.py`: `POST /api/mock/customer-confirmation`, `POST /api/mock/step-up-auth`.
+    - `backend/app/api/routes/benchmark.py`: `POST /api/benchmark/run`.
+  - Registered all routers on FastAPI application in `backend/app/main.py`.
+  - Added unit and HTTP integration test suite `tests/unit/test_api_routes.py` (all 11 tests covering health, starting investigations, case lookups, graph elements, evidence cards, supplemental evidence, analyst approvals/rejections/modifications, queue filtering, mock services, benchmark runner, and SSE stream).
+
+- **Layer 28 Completed**:
+  - Initialized Next.js 14 / TypeScript / Tailwind CSS / Lucide React analyst console application foundation under `frontend/`.
+  - Configured dark-mode financial intelligence theme with custom brand color tokens (`brand-950` to `brand-700`), risk neon glow tokens (`risk-critical`, `risk-high`, `risk-medium`, `risk-low`), and glassmorphism styling (`glass-panel`, `glass-card`).
+  - Implemented typed data contracts in `frontend/types/api.ts` directly matching backend Pydantic models.
+  - Implemented typed REST API client in `frontend/lib/api.ts` connecting to FastAPI backend (`http://localhost:8000`) for all investigation, case queue, graph, evidence, approval, and mock action endpoints.
+  - Implemented reusable UI components:
+    - `frontend/components/StatusBadge.tsx`: Badges for Risk levels, Case status, Next-Best Action types, and Human Approval status.
+    - `frontend/components/Header.tsx`: Navigation header with backend API live connectivity indicator, quick stats, refresh button, and trigger button.
+    - `frontend/components/CaseQueue.tsx`: Investigation triage queue with filter tabs (`ALL`, `IN_PROGRESS`, `AWAITING_APPROVAL`, `COMPLETED`), multi-attribute search, and interactive selection.
+    - `frontend/components/NewInvestigationModal.tsx`: Modal for launching investigations with quick test presets (Velocity burst, Device anomaly, High risk merchant) and custom parameters.
+    - `frontend/components/InvestigationWorkspace.tsx`: Comprehensive case intelligence console with Triad score cards (Risk, Confidence, Completeness), pre vs. post evidence recommendation history, human approval action controls (Approve, Reject, Modify), and interactive evidence submission.
+  - Integrated complete dashboard layout in `frontend/app/page.tsx`.
+  - Verified frontend type checking (`npm run typecheck`) and linting (`npm run lint`) pass cleanly with 0 errors and 0 warnings.
+
+- **Layer 29 Completed**:
+  - Implemented custom React hook `useInvestigationSSE` in `frontend/hooks/useInvestigationSSE.ts` managing EventSource streaming from `/api/investigations/{case_id}/events`.
+  - Implemented robust event deduplication using a persistent `Set` of `event_id` keys to ensure idempotent event handling.
+  - Implemented graceful connection management with automatic exponential backoff reconnection on transient drops, explicit `INVESTIGATION_STREAM_CLOSED` terminal detection, and error tracking without WebSocket dependencies.
+  - Implemented `InvestigationTimeline` component in `frontend/components/InvestigationTimeline.tsx` displaying chronological event milestones with running/completed/awaiting-approval/error indicators, node name tags, human-readable descriptions, and expandable JSON event payloads.
+  - Integrated `InvestigationTimeline` as a dedicated live tab in `frontend/components/InvestigationWorkspace.tsx`, dynamically synchronizing case headers, metrics, and approval controls upon receiving terminal workflow transitions.
+  - Verified Next.js production build (`next build`), type checks (`npm run typecheck`), and lint checks (`npm run lint`) all pass with 0 errors and 0 warnings.
+
+- **Layer 30 Completed**:
+  - Installed and configured `cytoscape` and `@types/cytoscape` in `frontend/`.
+  - Implemented `FraudGraphVisualization` in `frontend/components/FraudGraphVisualization.tsx` rendering the TigerGraph subgraph (Case, Customer, Account, Transaction, Device, IP, Historical Cases).
+  - Designed distinct visual encodings: focal case (neon orange round rectangle), customer (sky blue circle), account (indigo rounded rect), transaction (amber diamond), device (emerald hexagon), IP (purple octagon), and historical fraud case (red star).
+  - Added interactive controls toolbar: layout selector supporting `cose` (force-directed), `concentric` (focal center), `breadthfirst` (tree), and `circle` (radial); Zoom in/out buttons; Fit to Screen; Reset View; and element counter pills.
+  - Implemented 1-hop interactive selection: clicking a node or edge highlights connected neighbors, dims non-connected nodes (`opacity: 0.15`), and opens a slide-in inspection drawer displaying node properties, degree, and matched grounded evidence items.
+  - Mounted `FraudGraphVisualization` inside the `Graph Topology` tab in `frontend/components/InvestigationWorkspace.tsx`.
+  - Verified Next.js production build (`next build`), type checks (`npm run typecheck`), and lint checks (`npm run lint`) all pass with 0 errors and 0 warnings.
+
+- **Layer 32 Completed**:
+  - Implemented `NextBestActionPanel` in `frontend/components/NextBestActionPanel.tsx` strictly rendering pre-evidence recommendation vs. post-evidence recommendation history without overwriting earlier state.
+  - Implemented human-in-the-loop governance interactive modal and action triggers (`APPROVE`, `REJECT`, `MODIFY`) directly calling FastAPI backend endpoints `/api/investigations/{case_id}/approve`, `/reject`, and `/modify-action`.
+  - Added policy basis badges, approval role badges, report filing alerts, and simulation execution indicators (`execution_mode = SIMULATED`).
+  - Verified Next.js production build (`next build`), type checks (`npm run typecheck`), and lint checks (`npm run lint`) all pass with 0 errors.
+
+- **Layer 33 Completed**:
+  - Implemented `SimilarCasesPanel` in `frontend/components/SimilarCasesPanel.tsx` rendering top relevant historical cases with hybrid/graph/vector similarity meters, outcome badges (`FRAUD_CONFIRMED` vs. `CLEARED_BENIGN`), shared entity badges, typology tags, precedent warnings, and multi-attribute filters.
+  - Implemented `PolicyGuidancePanel` in `frontend/components/PolicyGuidancePanel.tsx` displaying structured regulatory and bank policy context retrieved via GraphRAG, deterministic action constraints, and mandatory approval tiers.
+  - Mounted panels in dedicated tabs in `frontend/components/InvestigationWorkspace.tsx`.
+  - Verified Next.js production build (`next build`), type checks (`npm run typecheck`), and lint checks (`npm run lint`) all pass with 0 errors.
+
+- **Layer 34 Completed**:
+  - Implemented backend local audit trail logging infrastructure in `backend/app/observability/tracer.py` capturing structured execution spans for LangGraph nodes, GSQL queries, GraphRAG retrievals, LLM invocations, policy evaluations, and action simulations.
+  - Enforced recursive secrets sanitization (`AGENTS.md` §32) masking all sensitive keys, tokens, and credentials before writing to local append-oriented JSONL files under `outputs/traces/{case_id}.jsonl`.
+  - Added `TraceSpanItem` and `InvestigationTraceResponse` schemas, service helper `get_case_traces(case_id)`, and exposed `GET /api/investigations/{case_id}/trace`.
+  - Wrapped LangGraph nodes in `backend/app/agents/graph.py` to record timestamps and durations.
+  - Implemented `AuditTrailPanel` in `frontend/components/AuditTrailPanel.tsx` with performance summary cards, waterfall timeline with duration bars, filter pills, search bar, raw JSON inspector drawer, and trace path copy/export.
+  - Mounted `AuditTrailPanel` inside the new `Audit & Traces` tab in `frontend/components/InvestigationWorkspace.tsx`.
+  - Verified Next.js production build (`next build`), type checks (`npm run typecheck`), and lint checks (`npm run lint`) all pass with 0 errors and 0 warnings.
 
 ---
 
