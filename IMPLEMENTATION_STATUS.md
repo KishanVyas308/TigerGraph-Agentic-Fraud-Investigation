@@ -75,7 +75,7 @@ Stage B is complete when one investigation can produce a normalized evidence bun
 - [x] Layer 15 — LLM Provider Router
 - [x] Layer 16 — Main Fraud Reasoning Model
 - [x] Layer 17 — Evidence Sufficiency Engine
-- [ ] Layer 18 — Evidence Planner / Value of Information
+- [x] Layer 18 — Evidence Planner / Value of Information
 - [ ] Layer 19 — Deterministic Policy Engine
 - [ ] Layer 20 — Human Approval State
 - [ ] Layer 21 — Mock Evidence and Action Services
@@ -254,11 +254,21 @@ Layer 12 can be marked complete only when:
   - Built bundle normalization and deterministic deduplication.
   - Added unit test suite `tests/unit/test_evidence_normalizer.py` (all 9 tests passed).
 
-- **Layer 11 Completed**:
-  - Implemented `ParallelEvidenceCollectionNode` in `backend/app/agents/nodes/evidence_collection.py` and `backend/app/agents/nodes/__init__.py`.
-  - Executed 6 baseline evidence branches concurrently using `asyncio.gather()` with fault isolation.
-  - Passed raw tool outputs through `EvidenceNormalizer` to populate typed state categories.
-  - Added unit test suite `tests/unit/test_evidence_collection_node.py` (all 3 tests passed).
+- [x] Layer 11 — Parallel Evidence Collection Node
+- [x] Layer 12 — Graph Feature Engine
+- [x] Layer 13 — Historical LightGBM Risk Signal
+- [x] Layer 14 — Laya Fast Classifier
+- [x] Layer 15 — LLM Provider Router
+- [x] Layer 16 — Main Fraud Reasoning Model
+- [x] Layer 17 — Evidence Sufficiency Engine
+- [x] Layer 18 — Evidence Planner / Value of Information
+
+- **Layer 18 Completed**:
+  - Implemented `EvidencePlannerNode` in `backend/app/agents/nodes/evidence_planner.py` and `backend/app/agents/nodes/__init__.py`.
+  - Calculated explainable Value of Information (VoI) score: `(uncertainty_reduction * decision_impact) / (cost_friction + 0.1)`.
+  - Supported typed evidence requests (`CUSTOMER_CONFIRMATION`, `STEP_UP_AUTH`, `ANALYST_INFORMATION`, `APPROVED_EXTERNAL_CHECK`).
+  - Preserved pre-evidence next-best action (`pre_evidence_next_best_action`) and set `case_status = AWAITING_EVIDENCE`.
+  - Added unit test suite `tests/unit/test_evidence_planner.py` (all passed).
 
 ---
 

@@ -1,16 +1,15 @@
 # CURRENT_TASK.md — Active Implementation Task
 
 ## Current Active Layer
-**Layer 18 — Evidence Planner / Value of Information (Stage C — Reasoning + Control)**
+**Layer 19 — Deterministic Policy Engine (Stage C — Reasoning + Control)**
 
 ## Objective
-Implement the Evidence Planner service in `backend/app/agents/nodes/evidence_planner.py` that selects the smallest, highest-value evidence request (`CUSTOMER_CONFIRMATION`, `STEP_UP_AUTH`, `ANALYST_INFORMATION`, `APPROVED_EXTERNAL_CHECK`) using an explainable Value of Information (VoI) approximation: `(expected uncertainty reduction * expected decision impact) / cost_friction`.
+Implement the Policy Engine in `backend/app/policy/engine.py` driven by `data/processed/policies.parquet` or `config/policy.yaml` to authorize next-best actions, determine approval requirements, roles, prerequisites, and SAR/report mandates. The policy engine must strictly govern all LLM recommendations.
 
 ## Acceptance Criteria
-- [ ] Select the highest-value missing evidence item from `state.missing_evidence`.
-- [ ] Before requesting additional evidence, preserve the current recommendation as `state.pre_evidence_next_best_action`.
-- [ ] Record why evidence is insufficient, what evidence is being requested, and what decision the evidence could change.
-- [ ] Support typed evidence requests (`CUSTOMER_CONFIRMATION`, `STEP_UP_AUTH`, `ANALYST_INFORMATION`, `APPROVED_EXTERNAL_CHECK`).
+- [ ] Evaluate candidate actions against deterministic policies.
+- [ ] Output authorization result: `allowed`, `autonomous`, `approval_required`, `approval_role`, `report_required`, `unmet_prerequisites`, `policy_reference`.
+- [ ] Ensure LLM cannot bypass policy constraints.
 - [ ] Unit tests pass with 100% success.
 
 ## Previous Completed Layers
@@ -32,3 +31,4 @@ Implement the Evidence Planner service in `backend/app/agents/nodes/evidence_pla
 - Layer 15 — LLM Provider Router
 - Layer 16 — Main Fraud Reasoning Model
 - Layer 17 — Evidence Sufficiency Engine
+- Layer 18 — Evidence Planner / Value of Information
