@@ -1,17 +1,17 @@
 # CURRENT_TASK.md — Active Implementation Task
 
 ## Current Active Layer
-**Layer 15 — LLM Provider Router (Stage C — Reasoning + Control)**
+**Layer 16 — Main Fraud Reasoning Model (Stage C — Reasoning + Control)**
 
 ## Objective
-Implement LLM provider routing and fallback service in `backend/app/llm/router.py` supporting primary Groq models (`openai/gpt-oss-120b`, `openai/gpt-oss-20b`) with automatic fallback to Gemini Flash (`gemini-1.5-flash` / `gemini-2.0-flash`) and structured JSON output schema validation.
+Implement the main fraud reasoning agent node in `backend/app/agents/nodes/reasoning.py` that processes normalized evidence, graph features, risk signals, policy context, and historical cases through the `LLMRouter` (Groq `openai/gpt-oss-120b` with Gemini Flash fallback) to produce structured output (`hypotheses`, `risk_level`, `risk_score`, `confidence`, `evidence_completeness`, `missing_evidence`, `preliminary_next_best_action`, and `explanation`).
 
 ## Acceptance Criteria
-- [ ] Implement `LLMRouter` with primary Groq integration and Gemini Flash fallback.
-- [ ] Support primary model (`openai/gpt-oss-120b`) and fast model (`openai/gpt-oss-20b`).
-- [ ] Handle provider failure, rate limits, timeouts, and API errors with automatic failover to Gemini Flash.
-- [ ] Enforce structured JSON / Pydantic schema generation with repair / retry logic.
-- [ ] Unit tests in `tests/unit/test_llm_router.py` pass with 100% success.
+- [ ] Ground all fraud reasoning strictly in normalized evidence and deterministic graph features (no fabricated facts).
+- [ ] Output structured Pydantic `RiskAssessment` and competing `FraudHypothesis` objects.
+- [ ] Keep `risk_level`, `confidence`, and `evidence_completeness` separate (do not collapse into one score).
+- [ ] Require every material assertion to reference evidence IDs.
+- [ ] Unit tests pass with 100% success.
 
 ## Previous Completed Layers
 - Layer 0 — Repository Bootstrap and Local Configuration
@@ -29,3 +29,4 @@ Implement LLM provider routing and fallback service in `backend/app/llm/router.p
 - Layer 12 — Graph Feature Engine
 - Layer 13 — Historical LightGBM Risk Signal
 - Layer 14 — Laya Fast Classifier
+- Layer 15 — LLM Provider Router
