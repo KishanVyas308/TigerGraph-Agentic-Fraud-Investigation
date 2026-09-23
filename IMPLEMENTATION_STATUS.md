@@ -7,10 +7,10 @@
 ## Overall Status
 
 **Status:** In Progress  
-**Completed Layers:** 11 / 41  
+**Completed Layers:** 12 / 41  
 **Current Stage:** Stage B — Retrieval + Evidence  
-**Current Active Layer:** Layer 11 — Parallel Evidence Collection Node  
-**Last Completed Layer:** Layer 10 — Evidence Model and Evidence Normalizer  
+**Current Active Layer:** Layer 12 — Graph Feature Engine  
+**Last Completed Layer:** Layer 11 — Parallel Evidence Collection Node  
 **Current Blockers:** None
 
 > Update this file after every completed implementation layer.  
@@ -48,7 +48,7 @@ Stage A is complete when:
 - [x] Layer 8 — GraphRAG Retrieval Service
 - [x] Layer 9 — Fraud Investigation State Models
 - [x] Layer 10 — Evidence Model and Evidence Normalizer
-- [ ] Layer 11 — Parallel Evidence Collection Node
+- [x] Layer 11 — Parallel Evidence Collection Node
 - [ ] Layer 12 — Graph Feature Engine
 
 ## Optional Enhancements
@@ -162,25 +162,25 @@ Stage E is complete when:
 
 ## Active Layer
 
-**Layer 11 — Parallel Evidence Collection Node**
+**Layer 12 — Graph Feature Engine**
 
 ## Goal
 
-Concurrently gather independent baseline evidence branches using `asyncio.gather()`, normalize outputs via `EvidenceNormalizer`, and update `FraudCaseState`.
+Produce typed `FraudFeatureSet` metrics (shared devices, shared IPs, fraud neighbors, shortest distance to fraud, connected cluster size, transaction velocity windows, amount deviation ratios, fan-in/fan-out, cycles, rapid pass-through) from normalized evidence and GSQL outputs without using an LLM.
 
 ## Required Deliverables
 
-- `backend/app/agents/nodes/evidence_collection.py`
-- `tests/unit/test_evidence_collection_node.py`
+- `backend/app/features/engine.py`
+- `tests/unit/test_feature_engine.py`
 
 ## Completion Criteria
 
-Layer 11 can be marked complete only when:
+Layer 12 can be marked complete only when:
 
-- 5 baseline evidence branches run concurrently using `asyncio.gather()`,
-- branch failures (e.g. GraphRAG or optional external signals) are isolated without failing the node,
-- raw outputs are converted into canonical `EvidenceItem` models via `EvidenceNormalizer`,
-- node returns a valid state update compatible with `merge_fraud_case_state`.
+- deterministic graph, behavioral, money flow, and device/identity features are calculated from normalized evidence and GSQL query results,
+- missing features retain `None` / null values without inventing zero metrics or hallucinated defaults,
+- every non-null feature includes a clear human-readable explanation,
+- unit tests pass with 100% success.
 
 ---
 
@@ -253,6 +253,12 @@ Layer 11 can be marked complete only when:
   - Added GraphRAG policy, typology, regulatory, and case precedent adapters preserving strict provenance (`TIGERGRAPH_GSQL`, `POLICY_GRAPHRAG`, `CASE_MEMORY`, `CUSTOMER_RESPONSE`, `AUTHENTICATION_SERVICE`, `ANALYST_INPUT`, `EXTERNAL_SIGNAL`).
   - Built bundle normalization and deterministic deduplication.
   - Added unit test suite `tests/unit/test_evidence_normalizer.py` (all 9 tests passed).
+
+- **Layer 11 Completed**:
+  - Implemented `ParallelEvidenceCollectionNode` in `backend/app/agents/nodes/evidence_collection.py` and `backend/app/agents/nodes/__init__.py`.
+  - Executed 6 baseline evidence branches concurrently using `asyncio.gather()` with fault isolation.
+  - Passed raw tool outputs through `EvidenceNormalizer` to populate typed state categories.
+  - Added unit test suite `tests/unit/test_evidence_collection_node.py` (all 3 tests passed).
 
 ---
 
