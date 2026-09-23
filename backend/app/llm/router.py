@@ -13,6 +13,7 @@ Features:
 - Never silently accepts invalid JSON when a response schema is requested.
 """
 
+from enum import Enum
 import json
 import re
 import time
@@ -334,8 +335,10 @@ class LLMRouter:
         for fname, field_info in schema_cls.model_fields.items():
             ftype = field_info.annotation
 
-            # Provide safe defaults based on field type
-            if ftype in [str, Optional[str]]:
+            # Handle Enum fields
+            if isinstance(ftype, type) and issubclass(ftype, Enum):
+                sample_dict[fname] = list(ftype)[0].value
+            elif ftype in [str, Optional[str]]:
                 sample_dict[fname] = f"mock_{fname}"
             elif ftype in [int, Optional[int]]:
                 sample_dict[fname] = 1
@@ -352,6 +355,6 @@ class LLMRouter:
 
         try:
             return schema_cls.model_validate(sample_dict)
-        except Exception:
-            # Fallback to constructing empty model instance
+        except Exception as exc:
+            logger.warning("Mock validation failed for %s: %s", schema_cls.__name__, exc)
             return schema_cls.model_construct()

@@ -7,10 +7,10 @@
 ## Overall Status
 
 **Status:** In Progress  
-**Completed Layers:** 16 / 41  
+**Completed Layers:** 17 / 41  
 **Current Stage:** Stage C — Reasoning + Control  
-**Current Active Layer:** Layer 16 — Main Fraud Reasoning Model  
-**Last Completed Layer:** Layer 15 — LLM Provider Router  
+**Current Active Layer:** Layer 17 — Evidence Sufficiency Engine  
+**Last Completed Layer:** Layer 16 — Main Fraud Reasoning Model  
 **Current Blockers:** None
 
 > Update this file after every completed implementation layer.  
@@ -73,7 +73,7 @@ Stage B is complete when one investigation can produce a normalized evidence bun
 # Stage C — Reasoning + Control
 
 - [x] Layer 15 — LLM Provider Router
-- [ ] Layer 16 — Main Fraud Reasoning Model
+- [x] Layer 16 — Main Fraud Reasoning Model
 - [ ] Layer 17 — Evidence Sufficiency Engine
 - [ ] Layer 18 — Evidence Planner / Value of Information
 - [ ] Layer 19 — Deterministic Policy Engine
