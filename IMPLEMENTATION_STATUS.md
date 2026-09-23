@@ -7,10 +7,10 @@
 ## Overall Status
 
 **Status:** In Progress  
-**Completed Layers:** 9 / 41  
+**Completed Layers:** 10 / 41  
 **Current Stage:** Stage B — Retrieval + Evidence  
-**Current Active Layer:** Layer 9 — Fraud Investigation State Models  
-**Last Completed Layer:** Layer 8 — GraphRAG Retrieval Service  
+**Current Active Layer:** Layer 10 — Evidence Model and Evidence Normalizer  
+**Last Completed Layer:** Layer 9 — Fraud Investigation State Models  
 **Current Blockers:** None
 
 > Update this file after every completed implementation layer.  
@@ -46,7 +46,7 @@ Stage A is complete when:
 
 - [x] Layer 7 — Policy, Typology, Regulation, and Historical Case Embeddings
 - [x] Layer 8 — GraphRAG Retrieval Service
-- [ ] Layer 9 — Fraud Investigation State Models
+- [x] Layer 9 — Fraud Investigation State Models
 - [ ] Layer 10 — Evidence Model and Evidence Normalizer
 - [ ] Layer 11 — Parallel Evidence Collection Node
 - [ ] Layer 12 — Graph Feature Engine
@@ -162,27 +162,25 @@ Stage E is complete when:
 
 ## Active Layer
 
-**Layer 7 — Policy, Typology, Regulation, and Historical Case Embeddings**
+**Layer 10 — Evidence Model and Evidence Normalizer**
 
 ## Goal
 
-Prepare GraphRAG knowledge by chunking and embedding fraud policies, typologies, regulatory context, and historical case summaries using SentenceTransformers.
+Standardize heterogeneous tool outputs into canonical `EvidenceItem` objects with auditable provenance and deduplication.
 
 ## Required Deliverables
 
-- `backend/app/rag/embeddings.py`
-- `backend/app/rag/chunking.py`
-- `backend/app/rag/policy_index.py`
-- `backend/app/rag/case_memory.py`
-- `scripts/build_embeddings.py`
+- `backend/app/evidence/normalizer.py`
+- `tests/unit/test_evidence_normalizer.py`
 
 ## Completion Criteria
 
-Layer 7 can be marked complete only when:
+Layer 10 can be marked complete only when:
 
-- policy, typology, and regulatory documents are chunked semantically,
-- local embeddings are generated deterministically,
-- case summaries for historical cases are indexed for future hybrid retrieval.
+- GSQL transaction, graph, device, and identity query outputs are normalized to canonical `EvidenceItem` objects,
+- GraphRAG policy, typology, regulatory, and historical case retrieval outputs are normalized with provenance,
+- evidence items are deduplicated deterministically by ID or content hash,
+- policy text is preserved as policy evidence without fabricating transaction facts.
 
 ---
 
@@ -233,6 +231,21 @@ Layer 7 can be marked complete only when:
   - Built `TigerGraphMCPAdapter` in `backend/app/graph/mcp_client.py` exposing 13 approved tools with JSON-schema contracts and strict read/write segregation.
   - Added unit tests in `tests/unit/test_tigergraph_client.py` (all 44 tests passed across the repository).
   - Completed all Stage A exit criteria.
+
+- **Layer 7 Completed**:
+  - Built GraphRAG chunking pipeline and local SentenceTransformers embedding engine in `backend/app/rag/embeddings.py`, `backend/app/rag/chunking.py`, `backend/app/rag/policy_index.py`, `backend/app/rag/case_memory.py`, and `scripts/build_embeddings.py`.
+  - Built unit tests in `tests/unit/test_rag_embeddings.py` (all passed).
+
+- **Layer 8 Completed**:
+  - Built GraphRAG retrieval service in `backend/app/rag/retrieval.py` supporting grounded policy context retrieval and hybrid precedent retrieval.
+  - Enforced strict benchmark case isolation preventing benchmark cases from being returned as precedents.
+  - Added unit tests in `tests/unit/test_retrieval.py` (all passed).
+
+- **Layer 9 Completed**:
+  - Implemented Pydantic v2 typed state models, domain enums, timeline events, and state reducer/merge semantics in `backend/app/models/state.py` and `backend/app/models/__init__.py`.
+  - Modeled `FraudCaseState` with all 6 categories (Identity, Evidence, Features, Reasoning Output, Actions, Case Control).
+  - Implemented `merge_fraud_case_state` reducer for LangGraph node returns with list deduplication, categorical routing, and pre/post evidence recommendation preservation.
+  - Added unit test suite `tests/unit/test_state_models.py` (all 9 tests passed).
 
 ---
 
