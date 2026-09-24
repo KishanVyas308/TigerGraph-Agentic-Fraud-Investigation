@@ -126,6 +126,7 @@ class ParallelEvidenceCollectionNode:
             "policy_evidence": pol_ev,
             "historical_case_evidence": hst_ev,
             "external_evidence": ext_ev,
+            "bank_risk_score": self._extract_bank_risk_score(txn_ev),
             "timeline": [timeline_event],
             "case_status": CaseStatus.IN_PROGRESS,
         }
@@ -164,11 +165,23 @@ class ParallelEvidenceCollectionNode:
         """Branch B: GSQL Graph Relationship & Topology Analysis."""
         items: List[EvidenceItem] = []
         target_account = account_ids[0] if account_ids else (txn_id or "ACC_001")
+        device_id: Optional[str] = None
+        ip_address: Optional[str] = None
+
+        if txn_id:
+            try:
+                context = await self._async_call(self.tg_client.get_transaction_context, txn_id)
+                context_data = context if isinstance(context, dict) else context.model_dump()
+                target_account = context_data.get("account_id") or target_account
+                device_id = context_data.get("device_id")
+                ip_address = context_data.get("ip_address")
+            except Exception as exc:
+                logger.warning("Could not resolve graph anchors for %s: %s", txn_id, exc)
 
         try:
             shared_dev, shared_ip, nbrs, shortest, flow = await asyncio.gather(
-                self._async_call(self.tg_client.find_shared_devices, target_account),
-                self._async_call(self.tg_client.find_shared_ips, target_account),
+                self._async_call(self.tg_client.find_shared_devices, device_id) if device_id else asyncio.sleep(0, result=None),
+                self._async_call(self.tg_client.find_shared_ips, ip_address) if ip_address else asyncio.sleep(0, result=None),
                 self._async_call(self.tg_client.find_fraud_neighbors, target_account),
                 self._async_call(self.tg_client.get_shortest_path_to_fraud, target_account),
                 self._async_call(self.tg_client.detect_money_flow_patterns, target_account),
@@ -227,7 +240,16 @@ class ParallelEvidenceCollectionNode:
         self, account_ids: List[str], txn_id: Optional[str]
     ) -> List[EvidenceItem]:
         """Branch E: Device & Identity Context Analysis."""
-        target = account_ids[0] if account_ids else (txn_id or "DEV_001")
+        target: Optional[str] = None
+        if txn_id:
+            try:
+                context = await self._async_call(self.tg_client.get_transaction_context, txn_id)
+                context_data = context if isinstance(context, dict) else context.model_dump()
+                target = context_data.get("device_id")
+            except Exception as exc:
+                logger.warning("Could not resolve device for %s: %s", txn_id, exc)
+        if target is None:
+            return []
         try:
             dev_idn = await self._async_call(self.tg_client.get_device_identity_context, target)
             if dev_idn:
@@ -235,6 +257,15 @@ class ParallelEvidenceCollectionNode:
         except Exception as exc:
             logger.warning("Branch E error: %s", exc)
         return []
+
+    @staticmethod
+    def _extract_bank_risk_score(items: List[EvidenceItem]) -> Optional[float]:
+        """Read the bank signal from its verified transaction evidence payload."""
+        for item in items:
+            raw = item.metadata.get("raw_transaction")
+            if isinstance(raw, dict) and raw.get("bank_risk_score") is not None:
+                return float(raw["bank_risk_score"])
+        return None
 
     async def _run_branch_f_external_signals(
         self, txn_id: Optional[str], customer_id: Optional[str]

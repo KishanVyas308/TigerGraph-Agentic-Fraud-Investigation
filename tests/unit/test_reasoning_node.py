@@ -124,3 +124,42 @@ def test_reasoning_prompt_building(reasoning_node, populated_case_state):
     assert "CUST_999" in prompt
     assert "EVD_TXN_" in prompt or "EVD_DEV_" in prompt
     assert "Bank Rule Risk Score: 85.0" in prompt
+
+
+def test_offline_reasoning_varies_by_case_signal(reasoning_node):
+    """The offline router must not return one hard-coded verdict for every case."""
+    async def _test():
+        low_state = FraudCaseState(
+            case_id="CASE_LOW_SIGNAL",
+            trigger_type=TriggerType.CUSTOMER_REPORT,
+            transaction_id="TX_LOW",
+            customer_id="CUST_LOW",
+            account_ids=["ACC_LOW"],
+            bank_risk_score=0.05,
+        )
+        high_state = FraudCaseState(
+            case_id="CASE_HIGH_SIGNAL",
+            trigger_type=TriggerType.HIGH_RISK_RULE,
+            transaction_id="TX_HIGH",
+            customer_id="CUST_HIGH",
+            account_ids=["ACC_HIGH"],
+            bank_risk_score=0.92,
+            behavior_features={"amount_to_mean_ratio": 4.2},
+        )
+
+        low_patch = await reasoning_node.process(low_state)
+        high_patch = await reasoning_node.process(high_state)
+
+        assert low_patch["risk_level"] == RiskLevel.LOW.value
+        assert high_patch["risk_level"] in {RiskLevel.HIGH.value, RiskLevel.CRITICAL.value}
+        assert low_patch["risk_score"] < high_patch["risk_score"]
+        assert (
+            low_patch["pre_evidence_next_best_action"]["action_type"]
+            == ActionType.ALLOW_TRANSACTION.value
+        )
+        assert (
+            high_patch["pre_evidence_next_best_action"]["action_type"]
+            == ActionType.BLOCK_TRANSACTION.value
+        )
+
+    asyncio.run(_test())

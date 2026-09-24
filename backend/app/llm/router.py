@@ -44,6 +44,7 @@ except ImportError:
     HAS_GEMINI = False
 
 T = TypeVar("T", bound=BaseModel)
+_USE_CONFIGURED_KEY = object()
 
 
 class LLMResponse(BaseModel):
@@ -78,15 +79,25 @@ class LLMRouter:
 
     def __init__(
         self,
-        groq_api_key: Optional[str] = None,
-        gemini_api_key: Optional[str] = None,
+        groq_api_key: Union[Optional[str], object] = _USE_CONFIGURED_KEY,
+        gemini_api_key: Union[Optional[str], object] = _USE_CONFIGURED_KEY,
         groq_primary_model: Optional[str] = None,
         groq_fast_model: Optional[str] = None,
         gemini_model: Optional[str] = None,
     ):
         settings = get_settings()
-        self.groq_api_key = groq_api_key or settings.GROQ_API_KEY
-        self.gemini_api_key = gemini_api_key or settings.GEMINI_API_KEY
+        # Omitted keys use application settings; explicit None forces offline
+        # mode, which keeps tests and local deterministic demos predictable.
+        self.groq_api_key = (
+            settings.GROQ_API_KEY
+            if groq_api_key is _USE_CONFIGURED_KEY
+            else groq_api_key
+        )
+        self.gemini_api_key = (
+            settings.GEMINI_API_KEY
+            if gemini_api_key is _USE_CONFIGURED_KEY
+            else gemini_api_key
+        )
         self.groq_primary_model = groq_primary_model or settings.GROQ_PRIMARY_MODEL
         self.groq_fast_model = groq_fast_model or settings.GROQ_FAST_MODEL
         self.gemini_model = gemini_model or getattr(settings, "GEMINI_FALLBACK_MODEL", "gemini-2.0-flash")

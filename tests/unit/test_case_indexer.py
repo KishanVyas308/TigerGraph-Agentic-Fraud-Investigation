@@ -134,6 +134,28 @@ def test_grounded_case_summary_synthesis():
     assert "Risk: HIGH" in summary
 
 
+def test_indexer_accepts_grounded_hypothesis_without_optional_typology():
+    """Offline reasoning titles remain valid case-memory typologies."""
+    state = _create_sample_finalized_state("CASE_OFFLINE_REASONING")
+    state.hypotheses = [
+        FraudHypothesis(
+            hypothesis_id="HYP_OFFLINE",
+            title="Transaction and graph anomaly",
+            description="Grounded deterministic assessment.",
+            likelihood=0.72,
+            supporting_evidence_ids=["EVD_TX_01"],
+        )
+    ]
+    indexer = CaseMemoryIndexer(index=CaseMemoryIndex())
+
+    summary = indexer.build_grounded_case_summary(state)
+    receipt = indexer.index_case(state, persist=False)
+
+    assert "Transaction and graph anomaly" in summary
+    assert receipt.is_indexed is True
+    assert receipt.primary_typology == "Transaction and graph anomaly"
+
+
 def test_embedding_computation_vector():
     """Verify embedding vector is normalized 384-dimensional float vector."""
     text = "Account Takeover investigation involving multi-account device cluster and rapid fund transfer."

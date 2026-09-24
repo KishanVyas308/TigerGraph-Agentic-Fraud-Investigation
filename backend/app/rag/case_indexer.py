@@ -109,8 +109,14 @@ class CaseMemoryIndexer:
         # 4. Primary Hypotheses
         if state.hypotheses:
             top_hyp = state.hypotheses[0]
+            typology_name = top_hyp.typology_name or top_hyp.title or "GENERAL"
+            hypothesis_confidence = (
+                top_hyp.confidence
+                if top_hyp.confidence is not None
+                else top_hyp.likelihood
+            )
             sections.append(
-                f"Primary Typology: {top_hyp.typology_name} (Confidence: {top_hyp.confidence:.2f}, Indicators: {', '.join(top_hyp.indicators[:3])})."
+                f"Primary Typology: {typology_name} (Confidence: {hypothesis_confidence:.2f}, Indicators: {', '.join(top_hyp.indicators[:3])})."
             )
 
         # 5. Evidence Highlights
@@ -227,6 +233,8 @@ class CaseMemoryIndexer:
         outcome = self.determine_case_outcome(state)
         primary_typology = (
             state.hypotheses[0].typology_name
+            or state.hypotheses[0].title
+            or "GENERAL"
             if state.hypotheses
             else "GENERAL"
         )

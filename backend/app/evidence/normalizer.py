@@ -107,14 +107,14 @@ class EvidenceNormalizer:
         items: List[EvidenceItem] = []
 
         txn_id = str(d.get("transaction_id") or "UNKNOWN")
-        hist_mean = d.get("historical_mean_amount")
+        hist_mean = d.get("historical_mean_amount", d.get("historical_avg_amount"))
         mean_ratio = d.get("amount_to_mean_ratio")
         hist_median = d.get("historical_median_amount")
         median_ratio = d.get("amount_to_median_ratio")
 
         count_5m = d.get("txn_count_5m")
-        count_1h = d.get("txn_count_1h")
-        count_24h = d.get("txn_count_24h")
+        count_1h = d.get("txn_count_1h", d.get("velocity_recent_window"))
+        count_24h = d.get("txn_count_24h", d.get("historical_tx_count"))
         is_new_merchant = d.get("is_new_merchant")
 
         entities = [txn_id]
@@ -188,6 +188,7 @@ class EvidenceNormalizer:
         shared_accounts = d.get("shared_account_count", 0)
         shared_customers = d.get("shared_customer_count", 0)
         fraud_cases = d.get("linked_fraud_cases", [])
+        prior_fraud_count = int(d.get("prior_fraud_cases_count", len(fraud_cases)) or 0)
 
         entities = [device_id]
         if isinstance(fraud_cases, list):
@@ -209,9 +210,10 @@ class EvidenceNormalizer:
             ))
 
         # 2. Device Linked Fraud Cases Fact
-        if fraud_cases:
+        if fraud_cases or prior_fraud_count:
             case_list_str = ", ".join(str(c) for c in fraud_cases)
-            fact = f"Device {device_id} is directly linked to {len(fraud_cases)} historical fraud cases ({case_list_str})"
+            suffix = f" ({case_list_str})" if case_list_str else ""
+            fact = f"Device {device_id} is directly linked to {prior_fraud_count} historical fraud cases{suffix}"
             items.append(EvidenceItem(
                 evidence_id=generate_deterministic_id("EVD_SHR_DEV_FRD", device_id, case_list_str),
                 source="TIGERGRAPH_GSQL",
@@ -221,7 +223,7 @@ class EvidenceNormalizer:
                 reliability=EvidenceReliability.HIGH,
                 timestamp=now_iso(),
                 entity_ids=entities,
-                metadata={"fraud_cases": fraud_cases},
+                metadata={"fraud_cases": fraud_cases, "fraud_accounts_on_device": prior_fraud_count},
             ))
 
         return items

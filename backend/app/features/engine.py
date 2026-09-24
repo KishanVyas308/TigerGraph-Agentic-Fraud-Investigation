@@ -110,9 +110,15 @@ class GraphFeatureEngine:
                 f"Device is shared across {features.shared_device_customer_count} distinct customer identities."
             )
 
+        fraud_count = self._extract_value(
+            sd_data,
+            raw_gsql if sd_data is None else {},
+            all_ev,
+            ["fraud_accounts_on_device", "prior_fraud_cases_count"],
+        )
         fraud_cases = self._extract_value(sd_data, raw_gsql if sd_data is None else {}, all_ev, ["linked_fraud_cases", "fraud_cases"])
-        if fraud_cases and isinstance(fraud_cases, (list, tuple)):
-            features.fraud_accounts_on_device = len(fraud_cases)
+        if fraud_count is not None or (fraud_cases and isinstance(fraud_cases, (list, tuple))):
+            features.fraud_accounts_on_device = int(fraud_count) if fraud_count is not None else len(fraud_cases)
             explanations["fraud_accounts_on_device"] = (
                 f"Device is linked to {features.fraud_accounts_on_device} confirmed historical fraud cases."
             )

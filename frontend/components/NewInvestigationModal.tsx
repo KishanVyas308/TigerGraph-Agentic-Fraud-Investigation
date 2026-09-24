@@ -16,28 +16,28 @@ interface NewInvestigationModalProps {
 
 const PRESETS = [
   {
-    title: "Velocity Burst Alert",
+    title: "Critical Transaction Alert",
     trigger: "TRANSACTION_ALERT" as TriggerType,
-    txId: "TXN_BURST_001",
-    custId: "CUST_9912",
-    accounts: "ACC_5501, ACC_5502",
-    desc: "Rapid transaction burst exceeding standard velocity thresholds",
+    txId: "TX_0001",
+    custId: "CUST_001",
+    accounts: "ACC_001",
+    desc: "Real dataset transaction with a 0.92 bank risk signal",
   },
   {
-    title: "Device Anomaly & Sharing",
+    title: "Fraud-linked Graph Review",
     trigger: "GRAPH_ANOMALY" as TriggerType,
-    txId: "TXN_DEV_4401",
-    custId: "CUST_3301",
-    accounts: "ACC_8812",
-    desc: "New device login matching prior known fraud cluster",
+    txId: "TX_0002",
+    custId: "CUST_002",
+    accounts: "ACC_002",
+    desc: "Low bank score with an account linked to historical fraud precedent",
   },
   {
-    title: "High Risk Offshore Transfer",
-    trigger: "HIGH_RISK_RULE" as TriggerType,
-    txId: "TXN_MERCH_771",
-    custId: "CUST_1105",
-    accounts: "ACC_9921",
-    desc: "Out-of-pattern cross-border wire to flagged high-risk beneficiary",
+    title: "Low-risk Customer Report",
+    trigger: "CUSTOMER_REPORT" as TriggerType,
+    txId: "TX_0075",
+    custId: "CUST_075",
+    accounts: "ACC_075",
+    desc: "Real dataset transaction with a 0.05 bank risk signal",
   },
 ];
 
@@ -48,9 +48,9 @@ export const NewInvestigationModal: React.FC<NewInvestigationModalProps> = ({
   isSubmitting,
 }) => {
   const [triggerType, setTriggerType] = useState<TriggerType>("TRANSACTION_ALERT");
-  const [transactionId, setTransactionId] = useState<string>("TXN_ALERT_100");
-  const [customerId, setCustomerId] = useState<string>("CUST_5001");
-  const [accountIds, setAccountIds] = useState<string>("ACC_1001");
+  const [transactionId, setTransactionId] = useState<string>("TX_0001");
+  const [customerId, setCustomerId] = useState<string>("CUST_001");
+  const [accountIds, setAccountIds] = useState<string>("ACC_001");
   const [caseId, setCaseId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 

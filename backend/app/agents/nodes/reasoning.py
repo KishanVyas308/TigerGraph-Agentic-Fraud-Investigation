@@ -117,7 +117,12 @@ class MainReasoningNode:
         )
 
         output: ReasoningOutputSchema
-        if llm_resp.parsed_output and isinstance(llm_resp.parsed_output, ReasoningOutputSchema):
+        # The generic router mock only proves schema plumbing; it must never make
+        # a fraud decision.  In offline mode use the grounded deterministic
+        # assessment below so different evidence produces different outcomes.
+        if llm_resp.provider == "mock":
+            output = self._fallback_reasoning(state, feature_set)
+        elif llm_resp.parsed_output and isinstance(llm_resp.parsed_output, ReasoningOutputSchema):
             output = llm_resp.parsed_output
         else:
             logger.warning("LLM router returned unparsed output for Case %s; constructing default schema.", state.case_id)
@@ -253,49 +258,133 @@ class MainReasoningNode:
         return "\n".join(sections)
 
     def _fallback_reasoning(self, state: FraudCaseState, features: FraudFeatureSet) -> ReasoningOutputSchema:
-        """Deterministic fallback reasoning schema when LLM output is unavailable or unparseable."""
-        # Calculate heuristic risk score based on deterministic features
-        risk_score = 0.3
-        if features.fraud_accounts_on_device and features.fraud_accounts_on_device > 0:
-            risk_score += 0.3
-        if features.fraud_neighbors_count and features.fraud_neighbors_count > 0:
-            risk_score += 0.2
-        if features.transaction_amount_ratio_to_mean and features.transaction_amount_ratio_to_mean > 3.0:
-            risk_score += 0.2
+        """Grounded deterministic assessment used when no live LLM is configured."""
+        all_evidence = state.all_evidence
 
-        risk_score = min(0.95, max(0.1, risk_score))
+        bank_score = state.bank_risk_score
+        if bank_score is not None and bank_score > 1.0:
+            bank_score /= 100.0
+        risk_score = 0.25 if bank_score is None else 0.75 * bank_score
 
-        if risk_score >= 0.8:
+        if (features.fraud_accounts_on_device or 0) > 0:
+            risk_score += min(0.15, 0.05 * (features.fraud_accounts_on_device or 0))
+        if (features.fraud_neighbors_count or 0) > 0:
+            risk_score += min(0.18, 0.06 * (features.fraud_neighbors_count or 0))
+        amount_ratio = features.transaction_amount_ratio_to_mean or 0.0
+        if amount_ratio >= 3.0:
+            risk_score += 0.15
+        elif amount_ratio >= 1.8:
+            risk_score += 0.08
+        if features.cycle_detected:
+            risk_score += 0.12
+        if features.rapid_pass_through:
+            risk_score += 0.12
+        if features.new_device:
+            risk_score += 0.03
+        if features.new_ip:
+            risk_score += 0.02
+        if features.new_merchant:
+            risk_score += 0.02
+        if (features.shared_device_account_count or 0) >= 5:
+            risk_score += 0.03
+
+        contradictory = [
+            item.evidence_id
+            for item in all_evidence
+            if item.category in (
+                EvidenceCategory.CUSTOMER_RESPONSE.value,
+                EvidenceCategory.AUTHENTICATION.value,
+                EvidenceCategory.EXTERNAL_SIGNAL.value,
+            )
+            and any(token in item.fact.upper() for token in ("CLEAN", "LEGITIMATE", "PASSED", "VERIFIED"))
+        ]
+        if contradictory:
+            risk_score -= min(0.08, 0.04 * len(contradictory))
+
+        risk_score = round(min(0.98, max(0.02, risk_score)), 2)
+
+        if risk_score >= 0.90:
+            level = RiskLevel.CRITICAL
+            action = ActionType.BLOCK_TRANSACTION
+        elif risk_score >= 0.70:
             level = RiskLevel.HIGH
             action = ActionType.BLOCK_TRANSACTION
-        elif risk_score >= 0.5:
+        elif risk_score >= 0.40:
             level = RiskLevel.MEDIUM
             action = ActionType.REQUEST_CUSTOMER_CONFIRMATION
         else:
             level = RiskLevel.LOW
             action = ActionType.ALLOW_TRANSACTION
 
-        evidence_ids = [item.evidence_id for item in state.all_evidence[:3]]
+        material_categories = {
+            EvidenceCategory.TRANSACTION_BEHAVIOR.value,
+            EvidenceCategory.GRAPH_RELATIONSHIP.value,
+            EvidenceCategory.DEVICE.value,
+            EvidenceCategory.IDENTITY.value,
+            EvidenceCategory.MONEY_FLOW.value,
+            EvidenceCategory.EXTERNAL_SIGNAL.value,
+            EvidenceCategory.AUTHENTICATION.value,
+            EvidenceCategory.CUSTOMER_RESPONSE.value,
+        }
+        supporting = [
+            item.evidence_id
+            for item in all_evidence
+            if item.evidence_id not in contradictory and item.category in material_categories
+        ][:8]
+
+        present = {str(item.category) for item in all_evidence}
+        domain_checks = [
+            EvidenceCategory.TRANSACTION_BEHAVIOR.value in present,
+            bool({EvidenceCategory.GRAPH_RELATIONSHIP.value, EvidenceCategory.MONEY_FLOW.value} & present),
+            bool({EvidenceCategory.DEVICE.value, EvidenceCategory.IDENTITY.value} & present),
+            EvidenceCategory.POLICY.value in present or EvidenceCategory.REGULATION.value in present,
+            EvidenceCategory.HISTORICAL_CASE.value in present,
+            bool({EvidenceCategory.EXTERNAL_SIGNAL.value, EvidenceCategory.AUTHENTICATION.value, EvidenceCategory.CUSTOMER_RESPONSE.value} & present),
+        ]
+        evidence_completeness = round(0.25 + 0.115 * sum(domain_checks), 2)
+        high_reliability = sum(1 for item in all_evidence if str(item.reliability) == "HIGH")
+        reliability_ratio = high_reliability / len(all_evidence) if all_evidence else 0.0
+        confidence = round(min(0.95, 0.30 + 0.40 * evidence_completeness + 0.25 * reliability_ratio), 2)
+
+        missing_evidence: List[str] = []
+        if not domain_checks[0]:
+            missing_evidence.append("Verified transaction context and behavior")
+        if not domain_checks[1]:
+            missing_evidence.append("Bounded graph relationship analysis")
+        if not domain_checks[3]:
+            missing_evidence.append("Applicable policy and approval requirements")
+        if risk_score >= 0.40 and not domain_checks[5]:
+            missing_evidence.append("Customer confirmation or step-up authentication result")
 
         hypothesis = FraudHypothesis(
-            hypothesis_id="HYP_ATO_01",
-            title="Account Takeover or Shared Device Fraud",
-            description="Transaction originated from suspicious device or high velocity pattern.",
+            hypothesis_id="HYP_DETERMINISTIC_01",
+            title="Transaction and graph anomaly",
+            description=(
+                f"Deterministic signals support a {level.value.lower()} risk assessment; "
+                "historical cases, where present, are treated only as precedent."
+            ),
             likelihood=risk_score,
-            supporting_evidence_ids=evidence_ids,
-            contradictory_evidence_ids=[],
+            supporting_evidence_ids=supporting,
+            contradictory_evidence_ids=contradictory,
         )
 
         return ReasoningOutputSchema(
             risk_level=level,
-            risk_score=round(risk_score, 2),
-            confidence=0.75,
-            evidence_completeness=0.70,
+            risk_score=risk_score,
+            confidence=confidence,
+            evidence_completeness=evidence_completeness,
             hypotheses=[hypothesis],
-            supporting_evidence_ids=evidence_ids,
-            contradictory_evidence_ids=[],
-            missing_evidence=["Customer transaction authorization confirmation"],
+            supporting_evidence_ids=supporting,
+            contradictory_evidence_ids=contradictory,
+            missing_evidence=missing_evidence,
             recommended_action_type=action,
-            recommended_action_reasoning=f"Deterministic fallback assigned {level.value} risk due to graph/behavior features.",
-            explanation=f"Fallback assessment evaluated risk_score={risk_score:.2f} based on deterministic evidence.",
+            recommended_action_reasoning=(
+                f"Offline deterministic assessment recommends {action.value} at {risk_score:.0%} risk "
+                f"using evidence {', '.join(supporting) if supporting else 'none available'}."
+            ),
+            explanation=(
+                f"Offline grounded assessment: risk {risk_score:.0%}, confidence {confidence:.0%}, "
+                f"and evidence completeness {evidence_completeness:.0%}, derived from the bank signal "
+                "and available deterministic graph/behavior evidence."
+            ),
         )
