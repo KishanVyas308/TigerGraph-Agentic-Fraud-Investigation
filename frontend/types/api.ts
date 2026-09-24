@@ -4,10 +4,10 @@
 
 export type TriggerType =
   | "TRANSACTION_ALERT"
-  | "DEVICE_ANOMALY"
-  | "HIGH_RISK_MERCHANT"
-  | "VELOCITY_BURST"
-  | "MANUAL_ANALYST_TRIGGER";
+  | "HIGH_RISK_RULE"
+  | "CUSTOMER_REPORT"
+  | "ANALYST_REFERRAL"
+  | "GRAPH_ANOMALY";
 
 export type RiskLevel = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 
@@ -16,9 +16,12 @@ export type CaseStatus =
   | "IN_PROGRESS"
   | "AWAITING_EVIDENCE"
   | "AWAITING_APPROVAL"
+  | "APPROVED"
+  | "REJECTED"
   | "COMPLETED"
   | "RESOLVED"
-  | "CLOSED";
+  | "CLOSED"
+  | "FAILED";
 
 export type ActionType =
   | "ALLOW_TRANSACTION"
@@ -36,12 +39,21 @@ export type ActionType =
   | "NO_ACTION";
 
 export type ApprovalRole =
+  | "ANALYST"
   | "FRAUD_ANALYST"
+  | "SENIOR_ANALYST"
   | "SENIOR_FRAUD_ANALYST"
+  | "FRAUD_MANAGER"
   | "FRAUD_SUPERVISOR"
-  | "COMPLIANCE_OFFICER";
+  | "COMPLIANCE_OFFICER"
+  | "SYSTEM_AUTOMATIC";
 
-export type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED" | "MODIFIED";
+export type ApprovalStatus =
+  | "NOT_REQUIRED"
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "MODIFIED";
 
 export type StopReason =
   | "SUFFICIENT_EVIDENCE_FOR_ACTION"
@@ -65,6 +77,8 @@ export type EvidenceCategory =
   | "AUTHENTICATION"
   | "ANALYST_INPUT"
   | "EXTERNAL_SIGNAL";
+
+export type EvidenceReliability = "HIGH" | "MEDIUM" | "LOW" | "UNVERIFIED";
 
 // Request Contracts
 export interface TriggerInvestigationRequest {
@@ -247,7 +261,7 @@ export interface EvidenceCard {
   source_reference?: string;
   category: string;
   fact: string;
-  reliability: number;
+  reliability: EvidenceReliability;
   timestamp: string;
   supports_hypotheses?: string[];
   contradicts_hypotheses?: string[];

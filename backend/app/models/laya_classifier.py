@@ -62,6 +62,22 @@ class LayaClassificationResult(BaseModel, Generic[T]):
         description="Brief human-readable rationale for classification outcome.",
     )
 
+    @property
+    def category(self) -> str:
+        """Helper property returning string representation of predicted label."""
+        if self.predicted_label is not None:
+            return self.predicted_label.value if hasattr(self.predicted_label, "value") else str(self.predicted_label)
+        return "UNKNOWN"
+
+    @property
+    def priority(self) -> str:
+        """Helper property returning suggested priority string."""
+        if self.confidence >= 0.8:
+            return "HIGH"
+        elif self.confidence >= 0.5:
+            return "MEDIUM"
+        return "LOW"
+
 
 class LayaClassifier:
     """ConvAI Innovations Laya local fast classifier with deterministic rule fallback."""
@@ -317,3 +333,7 @@ class LayaClassifier:
             model_name="DETERMINISTIC_FALLBACK" if not self.enabled else self.model_name,
             explanation=f"Fallback rule classified analyst response as '{label}'.",
         )
+
+
+# Convenient alias
+LayaFastClassifier = LayaClassifier

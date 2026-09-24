@@ -64,6 +64,7 @@ class PolicyGateNode:
         patch: Dict[str, Any] = {
             "post_evidence_next_best_action": authorized_nba.model_dump(),
             "case_status": target_status,
+            "approval_required": result.approval_required,
         }
 
         rec_action_val = (

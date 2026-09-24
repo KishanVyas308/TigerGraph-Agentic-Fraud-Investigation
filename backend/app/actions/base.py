@@ -43,6 +43,11 @@ class SimulatedActionResult(BaseModel):
     disclaimer: str = SIMULATION_DISCLAIMER
     timestamp: str = Field(default_factory=now_iso)
 
+    @property
+    def result(self) -> Dict[str, Any]:
+        """Convenience alias for details payload."""
+        return self.details
+
 
 class BaseActionExecutor(ABC):
     """Abstract base class for simulated banking action execution."""

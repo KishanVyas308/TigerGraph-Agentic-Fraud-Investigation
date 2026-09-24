@@ -94,6 +94,7 @@ class MockCustomerConfirmationService:
             details={
                 "transaction_id": transaction_id,
                 "customer_id": customer_id,
+                "confirmed": confirmed,
                 "confirmed_authorized": confirmed,
                 "channel": channel,
                 "status": status_str,
@@ -117,6 +118,21 @@ class MockCustomerConfirmationService:
             channel=channel,
             confirmed=False,
             timestamp=timestamp,
+        )
+
+    def request_confirmation(
+        self,
+        customer_id: Optional[str] = None,
+        transaction_id: Optional[str] = "TX_UNKNOWN",
+        channel: str = "SMS",
+        confirmed: bool = True,
+    ) -> Tuple[SimulatedActionResult, List[EvidenceItem]]:
+        """Convenience method matching agent request format."""
+        return self.confirm_transaction(
+            transaction_id=transaction_id or "TX_UNKNOWN",
+            customer_id=customer_id,
+            channel=channel,
+            confirmed=confirmed,
         )
 
 
@@ -162,6 +178,7 @@ class MockStepUpAuthService:
                 "customer_id": customer_id,
                 "transaction_id": transaction_id,
                 "method": method,
+                "passed": passed,
                 "verified": passed,
                 "attempts": attempts,
                 "status": status_str,
@@ -187,6 +204,20 @@ class MockStepUpAuthService:
             passed=False,
             attempts=attempts,
             timestamp=timestamp,
+        )
+
+    def challenge_user(
+        self,
+        account_id: Optional[str] = None,
+        customer_id: Optional[str] = None,
+        method: str = "BIOMETRIC",
+        passed: bool = True,
+    ) -> Tuple[SimulatedActionResult, List[EvidenceItem]]:
+        """Convenience method matching agent request format."""
+        return self.authenticate(
+            customer_id=customer_id or account_id or "CUST_UNKNOWN",
+            method=method,
+            passed=passed,
         )
 
 
@@ -231,6 +262,19 @@ class MockAnalystEvidenceService:
             disclaimer=SIMULATION_DISCLAIMER,
         )
         return result, norm_items
+
+    def request_analyst_review(
+        self,
+        case_id: str,
+        question: str = "",
+        analyst_id: str = "ANALYST_01",
+    ) -> Tuple[SimulatedActionResult, List[EvidenceItem]]:
+        """Convenience method matching agent request format."""
+        return self.submit_evidence(
+            case_id=case_id,
+            analyst_id=analyst_id,
+            note=question or "Analyst review completed.",
+        )
 
 
 class MockExternalReputationService:

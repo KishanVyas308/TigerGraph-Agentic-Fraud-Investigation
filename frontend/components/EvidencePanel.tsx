@@ -36,6 +36,13 @@ const CATEGORIES: Array<string> = [
   "ANALYST_INPUT",
 ];
 
+const RELIABILITY_PERCENT = {
+  HIGH: 95,
+  MEDIUM: 70,
+  LOW: 40,
+  UNVERIFIED: 10,
+} as const;
+
 export const EvidencePanel: React.FC<EvidencePanelProps> = ({
   evidence,
   onSubmitEvidence,
@@ -286,7 +293,7 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
           </div>
         ) : (
           filteredEvidence.map((ev) => {
-            const relPct = Math.round(ev.reliability * 100);
+            const relPct = RELIABILITY_PERCENT[ev.reliability];
             const hasSupports = ev.supports_hypotheses && ev.supports_hypotheses.length > 0;
             const hasContra = ev.contradicts_hypotheses && ev.contradicts_hypotheses.length > 0;
 
@@ -325,7 +332,7 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
                       />
                     </div>
                     <span className="font-mono font-bold text-slate-300 text-[11px]">
-                      {relPct}%
+                      {ev.reliability}
                     </span>
                   </div>
                 </div>

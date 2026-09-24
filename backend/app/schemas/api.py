@@ -19,6 +19,7 @@ from backend.app.models.state import (
     ApprovalStatus,
     CaseStatus,
     EvidenceCategory,
+    EvidenceReliability,
     RiskLevel,
     TriggerType,
 )
@@ -208,7 +209,7 @@ class EvidenceCard(BaseModel):
     source_reference: Optional[str] = None
     category: str
     fact: str
-    reliability: float
+    reliability: EvidenceReliability
     timestamp: str
     supports_hypotheses: List[str] = Field(default_factory=list)
     contradicts_hypotheses: List[str] = Field(default_factory=list)
@@ -264,4 +265,3 @@ class InvestigationTraceResponse(BaseModel):
     total_duration_ms: float = 0.0
     spans: List[TraceSpanItem] = Field(default_factory=list)
     trace_file_path: Optional[str] = None
-

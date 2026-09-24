@@ -1,0 +1,17 @@
+services:
+  tigergraph:
+    image: tigergraph/tigergraph:latest
+    container_name: tigergraph
+    platform: linux/amd64
+    init: true
+    ports:
+      - "14022:22"
+      - "9000:9000"
+      - "14240:14240"
+    ulimits:
+      nofile:
+        soft: 1000000
+        hard: 1000000
+    restart: unless-stopped
+    volumes:
+      - ./data:/home/tigergraph/mydata

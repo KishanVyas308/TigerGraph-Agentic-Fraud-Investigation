@@ -34,13 +34,15 @@ async def mock_customer_confirmation(
 ) -> Dict[str, Any]:
     """Simulate customer response to an SMS/push confirmation alert."""
     logger.info("Mock API: customer confirmation for %s / %s", request.customer_id, request.transaction_id)
-    result = customer_service.request_confirmation(
+    res = customer_service.request_confirmation(
         customer_id=request.customer_id,
         transaction_id=request.transaction_id,
-        confirmed=request.confirmed,
+        confirmed=request.confirmed if request.confirmed is not None else True,
     )
+    result = res[0] if isinstance(res, tuple) else res
+    exec_mode = result.execution_mode.value if hasattr(result.execution_mode, "value") else str(result.execution_mode)
     return {
-        "execution_mode": result.execution_mode.value,
+        "execution_mode": exec_mode,
         "success": result.success,
         "result": result.result,
         "disclaimer": result.disclaimer,
@@ -57,13 +59,15 @@ async def mock_step_up_auth(
 ) -> Dict[str, Any]:
     """Simulate user response to a step-up authentication challenge."""
     logger.info("Mock API: step-up authentication for %s", request.account_id)
-    result = auth_service.challenge_user(
+    res = auth_service.challenge_user(
         account_id=request.account_id,
-        challenge_type=request.challenge_type,
-        passed=request.passed,
+        method=request.challenge_type or "BIOMETRIC",
+        passed=request.passed if request.passed is not None else True,
     )
+    result = res[0] if isinstance(res, tuple) else res
+    exec_mode = result.execution_mode.value if hasattr(result.execution_mode, "value") else str(result.execution_mode)
     return {
-        "execution_mode": result.execution_mode.value,
+        "execution_mode": exec_mode,
         "success": result.success,
         "result": result.result,
         "disclaimer": result.disclaimer,

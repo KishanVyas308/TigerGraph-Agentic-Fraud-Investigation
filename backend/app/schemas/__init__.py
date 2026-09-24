@@ -18,7 +18,37 @@ from backend.app.schemas.api import (
     SubmitEvidenceRequest,
     TriggerInvestigationRequest,
 )
+from backend.app.schemas.benchmark import (
+    BenchmarkApprovalRoute,
+    BenchmarkCaseAnswer,
+    BenchmarkCaseDetails,
+    BenchmarkCaseRunMetric,
+    BenchmarkRunSummary,
+    BenchmarkValidationIssue,
+    BenchmarkValidationReport,
+    BenchmarkValidationResult,
+    ValidationCategory,
+    ValidationSeverity,
+)
 from backend.app.schemas.case import FinalCaseSummary, ValidationResult
+from backend.app.schemas.demo import (
+    DemoExecutionStep,
+    DemoScenarioId,
+    DemoScenarioMetadata,
+    DemoScenarioResult,
+    DemoSuiteReport,
+)
+from backend.app.schemas.evaluation import (
+    AblationMode,
+    AblationResult,
+    ActionAgreementMetrics,
+    CaseEvaluationResult,
+    ClassificationMetrics,
+    EvidenceEfficiencyMetrics,
+    HistoricalEvaluationReport,
+    LatencyMetrics,
+    TypologyMetrics,
+)
 
 __all__ = [
     "FinalCaseSummary",
@@ -39,4 +69,28 @@ __all__ = [
     "EvidenceCard",
     "EvidenceListResponse",
     "BenchmarkRunResponse",
+    "BenchmarkCaseAnswer",
+    "BenchmarkRunSummary",
+    "BenchmarkCaseDetails",
+    "BenchmarkApprovalRoute",
+    "BenchmarkCaseRunMetric",
+    "ValidationSeverity",
+    "ValidationCategory",
+    "BenchmarkValidationIssue",
+    "BenchmarkValidationResult",
+    "BenchmarkValidationReport",
+    "AblationMode",
+    "ClassificationMetrics",
+    "TypologyMetrics",
+    "ActionAgreementMetrics",
+    "EvidenceEfficiencyMetrics",
+    "LatencyMetrics",
+    "CaseEvaluationResult",
+    "AblationResult",
+    "HistoricalEvaluationReport",
+    "DemoScenarioId",
+    "DemoScenarioMetadata",
+    "DemoExecutionStep",
+    "DemoScenarioResult",
+    "DemoSuiteReport",
 ]

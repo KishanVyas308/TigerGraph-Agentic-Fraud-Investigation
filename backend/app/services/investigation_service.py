@@ -11,7 +11,6 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Set
 from pydantic import BaseModel
 
 from backend.app.actions.mocks import MockCustomerConfirmationService, MockStepUpAuthService
-from backend.app.agents.graph import investigate_case
 from backend.app.graph.tigergraph_client import TigerGraphClient, get_tigergraph_client
 from backend.app.models.state import (
     ActionType,
@@ -89,6 +88,7 @@ class InvestigationService:
         self.register_case(initial_state)
 
         logger.info("Starting investigation %s via LangGraph workflow", cid)
+        from backend.app.agents.graph import investigate_case
         final_state = await investigate_case(initial_state)
         self.register_case(final_state)
         return final_state
@@ -106,9 +106,9 @@ class InvestigationService:
                 if current_status.upper() != status.upper():
                     continue
 
-            risk_str = state.risk_level.value if state.risk_level else None
+            risk_str = state.risk_level.value if hasattr(state.risk_level, "value") else (str(state.risk_level) if state.risk_level else None)
             status_str = state.case_status.value if hasattr(state.case_status, "value") else str(state.case_status)
-            stop_str = state.stop_reason.value if state.stop_reason else None
+            stop_str = state.stop_reason.value if hasattr(state.stop_reason, "value") else (str(state.stop_reason) if state.stop_reason else None)
             action_str = (
                 state.post_evidence_next_best_action.action_type.value
                 if state.post_evidence_next_best_action and hasattr(state.post_evidence_next_best_action.action_type, "value")
@@ -321,6 +321,7 @@ class InvestigationService:
         )
 
         logger.info("Resuming investigation %s after additional evidence submission", case_id)
+        from backend.app.agents.graph import investigate_case
         updated_state = await investigate_case(state)
         self.register_case(updated_state)
         return updated_state
@@ -365,6 +366,7 @@ class InvestigationService:
         )
 
         logger.info("Resuming investigation %s with analyst decision: %s", case_id, status)
+        from backend.app.agents.graph import investigate_case
         resumed_state = await investigate_case(state, analyst_decision=decision)
         self.register_case(resumed_state)
         return resumed_state
@@ -425,9 +427,9 @@ class InvestigationService:
 
     def to_investigation_response(self, state: FraudCaseState) -> InvestigationResponse:
         """Convert FraudCaseState to typed InvestigationResponse schema."""
-        risk_str = state.risk_level.value if state.risk_level else None
+        risk_str = state.risk_level.value if hasattr(state.risk_level, "value") else (str(state.risk_level) if state.risk_level else None)
         status_str = state.case_status.value if hasattr(state.case_status, "value") else str(state.case_status)
-        stop_str = state.stop_reason.value if state.stop_reason else None
+        stop_str = state.stop_reason.value if hasattr(state.stop_reason, "value") else (str(state.stop_reason) if state.stop_reason else None)
 
         pre_action_dict = state.pre_evidence_next_best_action.model_dump() if state.pre_evidence_next_best_action else None
         requested_ev_dicts = [r.model_dump() for r in state.requested_evidence] if state.requested_evidence else []
@@ -435,13 +437,14 @@ class InvestigationService:
         executed_dicts = [e.model_dump() for e in state.executed_actions]
 
         hypotheses_dicts = []
+        risk_assess = getattr(state, "risk_assessment", None)
         if state.hypotheses:
             hypotheses_dicts = [h.model_dump() for h in state.hypotheses]
-        elif state.risk_assessment and state.risk_assessment.hypotheses:
-            hypotheses_dicts = [h.model_dump() for h in state.risk_assessment.hypotheses]
+        elif risk_assess and getattr(risk_assess, "hypotheses", None):
+            hypotheses_dicts = [h.model_dump() for h in risk_assess.hypotheses]
 
         missing_ev = list(state.missing_evidence) if state.missing_evidence else (
-            list(state.risk_assessment.missing_evidence) if state.risk_assessment and state.risk_assessment.missing_evidence else []
+            list(risk_assess.missing_evidence) if risk_assess and getattr(risk_assess, "missing_evidence", None) else []
         )
 
         similar_cases_dicts = []
@@ -489,7 +492,7 @@ class InvestigationService:
             requested_evidence=requested_ev_dicts,
             post_evidence_action=post_action_dict,
             approval_required=state.approval_required,
-            approval_status=state.approval_status.value if state.approval_status else None,
+            approval_status=state.approval_status.value if hasattr(state.approval_status, "value") else (str(state.approval_status) if state.approval_status else None),
             executed_actions=executed_dicts,
             sar_reference=state.sar_reference,
             is_persisted=state.is_persisted,

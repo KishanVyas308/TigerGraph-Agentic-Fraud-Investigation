@@ -93,22 +93,28 @@ class LLMRouter:
 
         # Initialize Groq client if key available
         self._groq_client = None
-        if HAS_GROQ and self.groq_api_key:
-            try:
-                self._groq_client = groq.Groq(api_key=self.groq_api_key)
-                logger.info("Initialized Groq client (Primary: %s, Fast: %s)", self.groq_primary_model, self.groq_fast_model)
-            except Exception as exc:
-                logger.warning("Failed to initialize Groq client: %s", exc)
+        if self.groq_api_key:
+            if HAS_GROQ:
+                try:
+                    self._groq_client = groq.Groq(api_key=self.groq_api_key)
+                    logger.info("Initialized Groq client (Primary: %s, Fast: %s)", self.groq_primary_model, self.groq_fast_model)
+                except Exception as exc:
+                    logger.warning("Failed to initialize Groq client: %s", exc)
+            else:
+                self._groq_client = "CONFIGURED_WITHOUT_SDK"
 
         # Initialize Gemini client if key available
         self._gemini_configured = False
-        if HAS_GEMINI and self.gemini_api_key:
-            try:
-                genai.configure(api_key=self.gemini_api_key)
+        if self.gemini_api_key:
+            if HAS_GEMINI:
+                try:
+                    genai.configure(api_key=self.gemini_api_key)
+                    self._gemini_configured = True
+                    logger.info("Initialized Gemini client (Model: %s)", self.gemini_model)
+                except Exception as exc:
+                    logger.warning("Failed to initialize Gemini client: %s", exc)
+            else:
                 self._gemini_configured = True
-                logger.info("Initialized Gemini client (Model: %s)", self.gemini_model)
-            except Exception as exc:
-                logger.warning("Failed to initialize Gemini client: %s", exc)
 
     def complete(
         self,
@@ -154,7 +160,7 @@ class LLMRouter:
                 logger.warning("Groq call failed (%s); falling back to Gemini Flash: %s", target_groq_model, exc)
 
         # Attempt 2: Gemini Provider Fallback
-        if HAS_GEMINI and self._gemini_configured:
+        if self._gemini_configured:
             try:
                 response = self._call_gemini(
                     prompt=effective_prompt,
@@ -335,8 +341,17 @@ class LLMRouter:
         for fname, field_info in schema_cls.model_fields.items():
             ftype = field_info.annotation
 
+            # Handle specific known fields for coherent mock reasoning
+            if fname == "risk_level":
+                sample_dict[fname] = "HIGH"
+            elif fname == "recommended_action_type":
+                sample_dict[fname] = "BLOCK_TRANSACTION"
+            elif fname == "risk_score":
+                sample_dict[fname] = 0.85
+            elif fname in ["confidence", "evidence_completeness"]:
+                sample_dict[fname] = 0.90
             # Handle Enum fields
-            if isinstance(ftype, type) and issubclass(ftype, Enum):
+            elif isinstance(ftype, type) and issubclass(ftype, Enum):
                 sample_dict[fname] = list(ftype)[0].value
             elif ftype in [str, Optional[str]]:
                 sample_dict[fname] = f"mock_{fname}"

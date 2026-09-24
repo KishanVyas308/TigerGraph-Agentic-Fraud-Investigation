@@ -20,6 +20,7 @@ from backend.app.models.state import (
     CaseStatus,
     FraudCaseState,
     NextBestAction,
+    RiskLevel,
     StopReason,
     TimelineEvent,
 )
@@ -90,12 +91,25 @@ class CaseFinalizer:
         if explicit_reason:
             return explicit_reason
         if state.stop_reason:
-            if isinstance(state.stop_reason, StopReason):
-                return state.stop_reason
-            try:
-                return StopReason(state.stop_reason)
-            except ValueError:
-                pass
+            # If previous stop reason was awaiting human review, but approval has now been processed
+            # (or approval_required is False and status is no longer awaiting approval), re-determine.
+            is_awaiting = (
+                state.stop_reason == StopReason.AWAITING_HUMAN_REVIEW
+                or str(state.stop_reason) == StopReason.AWAITING_HUMAN_REVIEW.value
+            )
+            if is_awaiting:
+                if not state.approval_required and state.case_status != CaseStatus.AWAITING_APPROVAL:
+                    # Case resumed and approved/resolved, re-determine final stop reason below
+                    pass
+                else:
+                    return StopReason.AWAITING_HUMAN_REVIEW
+            else:
+                if isinstance(state.stop_reason, StopReason):
+                    return state.stop_reason
+                try:
+                    return StopReason(state.stop_reason)
+                except ValueError:
+                    pass
 
         # 1. Awaiting human review
         if state.approval_required or state.case_status == CaseStatus.AWAITING_APPROVAL:
@@ -108,7 +122,10 @@ class CaseFinalizer:
             return StopReason.POLICY_MANDATED_ESCALATION
 
         # 3. No material fraud evidence
-        if current_nba and current_nba.action_type in [ActionType.CLOSE_CASE, ActionType.NO_ACTION]:
+        if (
+            (current_nba and current_nba.action_type in [ActionType.CLOSE_CASE, ActionType.NO_ACTION, ActionType.ALLOW_TRANSACTION])
+            or state.risk_level == RiskLevel.LOW
+        ):
             if state.risk_score is None or state.risk_score <= 0.40:
                 return StopReason.NO_MATERIAL_FRAUD_EVIDENCE
 
@@ -134,9 +151,13 @@ class CaseFinalizer:
     ) -> str:
         """Synthesize a concise, human-auditable text summary of the investigation."""
         current_nba = state.post_evidence_next_best_action or state.pre_evidence_next_best_action
-        action_name = current_nba.action_type.value if current_nba else "NO_ACTION"
+        action_name = (
+            current_nba.action_type.value
+            if hasattr(current_nba.action_type, "value")
+            else str(current_nba.action_type)
+        ) if current_nba else "NO_ACTION"
         top_hypo = state.hypotheses[0].title if state.hypotheses else "General Anomaly"
-        risk_str = str(state.risk_level or "HIGH")
+        risk_str = str(state.risk_level.value if hasattr(state.risk_level, "value") else (state.risk_level or "HIGH"))
         score_str = f"{state.risk_score:.2f}" if state.risk_score is not None else "N/A"
         conf_str = f"{state.confidence:.2f}" if state.confidence is not None else "N/A"
 
@@ -152,9 +173,12 @@ class CaseFinalizer:
             else "No SAR Filed"
         )
 
+        stop_val = stop_reason.value if hasattr(stop_reason, "value") else str(stop_reason)
+        trigger_val = state.trigger_type.value if hasattr(state.trigger_type, "value") else str(state.trigger_type)
+
         lines = [
-            f"Case {state.case_id} concluded with stop reason '{stop_reason.value}'.",
-            f"Trigger: {state.trigger_type.value} on Customer '{state.customer_id or 'UNKNOWN'}' (Txn: {state.transaction_id or 'UNKNOWN'}).",
+            f"Case {state.case_id} concluded with stop reason '{stop_val}'.",
+            f"Trigger: {trigger_val} on Customer '{state.customer_id or 'UNKNOWN'}' (Txn: {state.transaction_id or 'UNKNOWN'}).",
             f"Assessment: Risk {risk_str} (Score: {score_str}, Confidence: {conf_str}) — Primary Typology: {top_hypo}.",
             f"Evidence: {ev_count} verified item(s) collected across graph, behavior, device, and policy domains.",
             f"Disposition: Recommended action '{action_name}'. {exec_count} action(s) executed/simulated. Regulatory Status: {sar_str}.",

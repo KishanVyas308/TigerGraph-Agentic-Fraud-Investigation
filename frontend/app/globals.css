@@ -12,6 +12,33 @@ body {
   background: radial-gradient(circle at 50% 0%, #0F172A 0%, #060913 75%);
   min-height: 100vh;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(249, 115, 22, 0.7);
+  outline-offset: 2px;
+}
+
+.metric-card {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(17, 24, 39, 0.86), rgba(9, 13, 21, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
 /* Glassmorphism Panel Utilities */

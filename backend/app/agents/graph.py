@@ -89,13 +89,23 @@ def route_sufficiency_gate(state: FraudCaseState, max_iterations: int = MAX_EVID
 
 def route_policy_gate(state: FraudCaseState) -> str:
     """Route from policy gate: human approval required vs autonomous execution."""
-    if state.approval_required:
-        # Check if already reviewed
-        if state.approval_status in [ApprovalStatus.APPROVED, ApprovalStatus.MODIFIED]:
-            logger.info("Case %s already approved (%s); proceeding to execution", state.case_id, state.approval_status)
-            return "execute_or_simulate"
-        elif state.approval_status == ApprovalStatus.REJECTED:
-            logger.info("Case %s action rejected by analyst; proceeding to execution of fallback", state.case_id)
+    approval_needed = (
+        state.approval_required
+        or state.case_status == CaseStatus.AWAITING_APPROVAL
+        or (state.post_evidence_next_best_action and state.post_evidence_next_best_action.approval_required)
+    )
+    if approval_needed:
+        # Check if already reviewed and processed
+        has_decision = state.approval_status in [
+            ApprovalStatus.APPROVED,
+            ApprovalStatus.MODIFIED,
+            ApprovalStatus.REJECTED,
+            "APPROVED",
+            "MODIFIED",
+            "REJECTED",
+        ]
+        if has_decision:
+            logger.info("Case %s already approved/resolved (%s); proceeding to execution", state.case_id, state.approval_status)
             return "execute_or_simulate"
         else:
             logger.info("Case %s requires human analyst approval; routing to human_approval", state.case_id)
@@ -152,64 +162,71 @@ class CompiledInvestigationWorkflow:
                     span_meta["patch_keys"] = list(patch.keys())
                 return patch or {}
 
-        # 1. Intake Sequence
-        intake_sequence = [
-            ("validate_trigger", self.nodes["validate_trigger"]),
-            ("load_or_create_case", self.nodes["load_or_create_case"]),
-            ("classify_trigger", self.nodes["classify_trigger"]),
-            ("persist_case_start", self.nodes["persist_case_start"]),
-        ]
-        for name, node in intake_sequence:
-            patch = await run_node(name, node)
-            current_state = merge_fraud_case_state(current_state, patch)
+        # Check if resuming an investigation from an approval interrupt
+        is_resumed_from_approval = (
+            current_state.case_status == CaseStatus.AWAITING_APPROVAL
+            and current_state.approval_status is not None
+        )
 
-        # 2. Baseline Evidence Collection
-        ev_patch = await run_node("parallel_evidence_collection", self.nodes["parallel_evidence_collection"])
-        current_state = merge_fraud_case_state(current_state, ev_patch)
+        if not is_resumed_from_approval:
+            # 1. Intake Sequence
+            intake_sequence = [
+                ("validate_trigger", self.nodes["validate_trigger"]),
+                ("load_or_create_case", self.nodes["load_or_create_case"]),
+                ("classify_trigger", self.nodes["classify_trigger"]),
+                ("persist_case_start", self.nodes["persist_case_start"]),
+            ]
+            for name, node in intake_sequence:
+                patch = await run_node(name, node)
+                current_state = merge_fraud_case_state(current_state, patch)
 
-        # 3. Main Reasoning
-        reason_patch = await run_node("main_reasoning", self.nodes["main_reasoning"])
-        current_state = merge_fraud_case_state(current_state, reason_patch)
+            # 2. Baseline Evidence Collection
+            ev_patch = await run_node("parallel_evidence_collection", self.nodes["parallel_evidence_collection"])
+            current_state = merge_fraud_case_state(current_state, ev_patch)
 
-        # 4. Evidence Sufficiency Gate & Loop
-        while True:
-            suff_patch = await run_node("sufficiency_gate", self.nodes["sufficiency_gate"], iteration=current_state.iteration_count)
-            current_state = merge_fraud_case_state(current_state, suff_patch)
+            # 3. Main Reasoning
+            reason_patch = await run_node("main_reasoning", self.nodes["main_reasoning"])
+            current_state = merge_fraud_case_state(current_state, reason_patch)
 
-            route = route_sufficiency_gate(current_state, max_iterations=self.max_iterations)
-            if route == "record_pre_evidence_nba":
-                # Execute bounded evidence iteration loop
-                pre_patch = await run_node("record_pre_evidence_nba", self.nodes["record_pre_evidence_nba"])
-                current_state = merge_fraud_case_state(current_state, pre_patch)
+            # 4. Evidence Sufficiency Gate & Loop
+            while True:
+                suff_patch = await run_node("sufficiency_gate", self.nodes["sufficiency_gate"], iteration=current_state.iteration_count)
+                current_state = merge_fraud_case_state(current_state, suff_patch)
 
-                plan_patch = await run_node("evidence_planner", self.nodes["evidence_planner"])
-                current_state = merge_fraud_case_state(current_state, plan_patch)
+                route = route_sufficiency_gate(current_state, max_iterations=self.max_iterations)
+                if route == "record_pre_evidence_nba":
+                    # Execute bounded evidence iteration loop
+                    pre_patch = await run_node("record_pre_evidence_nba", self.nodes["record_pre_evidence_nba"])
+                    current_state = merge_fraud_case_state(current_state, pre_patch)
 
-                req_patch = await run_node("request_evidence", self.nodes["request_evidence"])
-                current_state = merge_fraud_case_state(current_state, req_patch)
+                    plan_patch = await run_node("evidence_planner", self.nodes["evidence_planner"])
+                    current_state = merge_fraud_case_state(current_state, plan_patch)
 
-                ingest_patch = await run_node("ingest_evidence", self.nodes["ingest_evidence"])
-                current_state = merge_fraud_case_state(current_state, ingest_patch)
+                    req_patch = await run_node("request_evidence", self.nodes["request_evidence"])
+                    current_state = merge_fraud_case_state(current_state, req_patch)
 
-                # Re-assess reasoning with newly collected evidence
-                re_reason_patch = await run_node("main_reasoning", self.nodes["main_reasoning"])
-                current_state = merge_fraud_case_state(current_state, re_reason_patch)
-                # Loop back to evaluate sufficiency
-            else:
-                # Evidence sufficient or loop bound reached
-                break
+                    ingest_patch = await run_node("ingest_evidence", self.nodes["ingest_evidence"])
+                    current_state = merge_fraud_case_state(current_state, ingest_patch)
 
-        # 5. Determine Next-Best Action
-        nba_patch = await run_node("determine_next_best_action", self.nodes["determine_next_best_action"])
-        current_state = merge_fraud_case_state(current_state, nba_patch)
+                    # Re-assess reasoning with newly collected evidence
+                    re_reason_patch = await run_node("main_reasoning", self.nodes["main_reasoning"])
+                    current_state = merge_fraud_case_state(current_state, re_reason_patch)
+                    # Loop back to evaluate sufficiency
+                else:
+                    # Evidence sufficient or loop bound reached
+                    break
 
-        # 6. Policy Authorization Gate
-        policy_patch = await run_node("policy_gate", self.nodes["policy_gate"])
-        current_state = merge_fraud_case_state(current_state, policy_patch)
+            # 5. Determine Next-Best Action
+            nba_patch = await run_node("determine_next_best_action", self.nodes["determine_next_best_action"])
+            current_state = merge_fraud_case_state(current_state, nba_patch)
+
+            # 6. Policy Authorization Gate
+            policy_patch = await run_node("policy_gate", self.nodes["policy_gate"])
+            current_state = merge_fraud_case_state(current_state, policy_patch)
 
         # 7. Human Approval Check
         action_route = route_policy_gate(current_state)
-        if action_route == "human_approval":
+        if action_route == "human_approval" or is_resumed_from_approval:
             # If no analyst decision has been provided yet, interrupt and yield for review
             if current_state.approval_status is None:
                 logger.info(
@@ -244,6 +261,12 @@ class CompiledInvestigationWorkflow:
                 # Analyst decision present; execute human approval node
                 app_patch = await run_node("human_approval", self.nodes["human_approval"])
                 current_state = merge_fraud_case_state(current_state, app_patch)
+
+                # If the modified decision still requires approval (e.g. policy disallowed modification)
+                if current_state.case_status == CaseStatus.AWAITING_APPROVAL or current_state.approval_required:
+                    logger.info("Investigation %s remains in AWAITING_APPROVAL after analyst decision.", current_state.case_id)
+                    current_state.stop_reason = StopReason.AWAITING_HUMAN_REVIEW
+                    return current_state
 
         # 8. Action Execution (Simulated)
         exec_patch = await run_node("execute_or_simulate", self.nodes["execute_or_simulate"])

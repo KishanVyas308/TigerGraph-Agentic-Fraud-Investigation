@@ -1,31 +1,30 @@
 # CURRENT_TASK.md — Active Implementation Task
 
 ## Current Active Layer
-**Layer 35 — Unit Test Suite (Stage E — Quality, Benchmark, and Demo)**
+**Layer 40 — Demo Scenario Preparation (Stage E — Quality, Benchmark, and Demo) [COMPLETED]**
+
+## All 41 Layers Completed
+All layers from Layer 0 through Layer 40 across Stages A, B, C, D, and E are now fully implemented, tested, and verified.
 
 ## Objective
-Establish a comprehensive, consolidated, network-free unit test suite using `pytest` covering all core deterministic logic across the fraud investigation engine:
-1. Evidence normalization and provenance verification.
-2. Fraud graph feature engine calculations and boundary conditions.
-3. Policy engine deterministic authorization, rules, prerequisites, and approval roles.
-4. Evidence sufficiency gate decisions across risk, confidence, and completeness dimensions.
-5. Evidence planner / Value of Information ranking and friction penalties.
-6. State validation and transitions for `FraudCaseState`.
-7. Action simulator and mock services.
-8. LLM structured-output parsing, schema validation, and fallback routing logic.
+Prepare three deterministic, high-impact local demo scenarios showcasing the core capabilities of the system using the real LangGraph investigation workflow without demo-only branching or logic shortcuts:
+1. **Demo 1 — Fraud Network**: Graph-detected fraud ring with shared devices, related accounts, prior fraud case link, graph path, and immediate high-risk action.
+2. **Demo 2 — Uncertain Case**: Borderline transaction triggering evidence gathering, customer confirmation, and dynamic recommendation change.
+3. **Demo 3 — Human Approval**: High-risk sensitive action triggering policy gate, analyst approval interrupt/resume, and final execution.
 
 ## Acceptance Criteria
-- [ ] Create/consolidate unit test modules under `tests/unit/` covering:
-  - Evidence normalization (`test_evidence_normalizer.py`),
-  - Graph features (`test_graph_feature_engine.py`),
-  - Policy engine rules (`test_policy_engine.py`),
-  - Sufficiency gate logic (`test_sufficiency_gate.py`),
-  - Evidence planner ranking (`test_evidence_planner.py`),
-  - State schemas & transitions (`test_fraud_state.py`),
-  - Action simulation & mocks (`test_action_mocks.py`),
-  - Router, provider parsing & fallback (`test_provider_router.py`).
-- [ ] Strict mocking of TigerGraph and external LLM APIs (100% offline, zero network access required).
-- [ ] Maintain clean execution and high test assertion coverage.
+- [x] Implement `backend/app/services/demo_runner.py`:
+  - Demo orchestration service preparing fixtures and executing the 3 required demo scenarios through the unified LangGraph workflow.
+  - Demo 1 (Fraud Network): Executes graph traversal, computes shared device and fraud-linked neighbors, identifies mule/ring topology, executes automated block.
+  - Demo 2 (Uncertain Case): Triggers evidence loop, requests customer confirmation, ingests simulated customer response, verifies pre-evidence and post-evidence recommendations.
+  - Demo 3 (Human Approval): Recommends governed sensitive action (e.g. `BLOCK_ACCOUNT`), enters `AWAITING_APPROVAL`, accepts simulated analyst approval, resumes execution to completion.
+- [x] Implement `scripts/run_demo.py` CLI:
+  - Command-line runner supporting `--scenario <1|2|3|ALL>`, `--step-by-step`, `--export-dir`.
+  - Displays human-readable investigation narrative, graph facts, policy checks, approval gates, and timeline events.
+- [x] Create `docs/demo_walkthrough.md`:
+  - Concise analyst walkthrough script describing what to click in the dashboard, what evidence should appear, and expected system behavior.
+- [x] Add unit test suite in `tests/unit/test_demo_scenarios.py`:
+  - Unit tests verifying deterministic execution and state invariants for all 3 demo scenarios.
 
 ## Previous Completed Layers
 - Layer 0 — Repository Bootstrap and Local Configuration
@@ -63,3 +62,8 @@ Establish a comprehensive, consolidated, network-free unit test suite using `pyt
 - Layer 32 — Next-Best Action and Approval UI
 - Layer 33 — Similar Cases and Policy UI
 - Layer 34 — Local Audit Trail and Observability
+- Layer 35 — Unit Test Suite
+- Layer 36 — Local Integration Tests
+- Layer 37 — Benchmark Runner
+- Layer 38 — Benchmark Output Validator
+- Layer 39 — Evaluation Harness Using Historical Cases

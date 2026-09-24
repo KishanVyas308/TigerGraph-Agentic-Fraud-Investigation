@@ -136,9 +136,9 @@ class CaseMemoryIndexer:
             sections.append(f"Actions Executed: {', '.join(exec_acts)}.")
 
         # 8. Outcome & Assessment
-        risk_str = state.risk_level.value if state.risk_level else "UNKNOWN"
+        risk_str = state.risk_level.value if hasattr(state.risk_level, "value") else str(state.risk_level or "UNKNOWN")
         conf_val = f"{state.confidence:.2f}" if state.confidence is not None else "N/A"
-        stop_str = state.stop_reason.value if state.stop_reason else "FINALIZED"
+        stop_str = state.stop_reason.value if hasattr(state.stop_reason, "value") else str(state.stop_reason or "FINALIZED")
         sections.append(f"Outcome: {stop_str} (Risk: {risk_str}, Confidence: {conf_val}).")
 
         return " ".join(sections)

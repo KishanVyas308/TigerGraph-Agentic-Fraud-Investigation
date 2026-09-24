@@ -9,6 +9,9 @@ from backend.app.models.state import (
     ApprovalRole,
     ApprovalStatus,
     CaseStatus,
+    EvidenceCategory,
+    EvidenceItem,
+    EvidenceReliability,
     FraudCaseState,
     RiskLevel,
     StopReason,
@@ -115,6 +118,17 @@ def test_get_investigation_graph_api(client: TestClient, sample_case: FraudCaseS
 
 def test_get_investigation_evidence_api(client: TestClient, sample_case: FraudCaseState):
     """Test GET /api/investigations/{case_id}/evidence returns evidence cards."""
+    sample_case.transaction_evidence.append(
+        EvidenceItem(
+            evidence_id="EV_API_RELIABILITY_01",
+            source="TIGERGRAPH_GSQL",
+            source_reference="TX_API_01",
+            category=EvidenceCategory.TRANSACTION_BEHAVIOR,
+            fact="Transaction amount exceeds the historical account mean.",
+            reliability=EvidenceReliability.HIGH,
+            entity_ids=["TX_API_01"],
+        )
+    )
     response = client.get(f"/api/investigations/{sample_case.case_id}/evidence")
     assert response.status_code == 200
     data = response.json()
@@ -122,6 +136,7 @@ def test_get_investigation_evidence_api(client: TestClient, sample_case: FraudCa
     assert data["case_id"] == sample_case.case_id
     assert "evidence" in data
     assert isinstance(data["evidence"], list)
+    assert data["evidence"][0]["reliability"] == "HIGH"
 
 
 def test_submit_additional_evidence_api(client: TestClient, sample_case: FraudCaseState):
@@ -176,7 +191,8 @@ def test_case_queue_api(client: TestClient, sample_case: FraudCaseState):
     assert any(c["case_id"] == sample_case.case_id for c in data["cases"])
 
     # Filter by status
-    res_filter = client.get(f"/api/cases?status={sample_case.case_status.value}")
+    status_str = sample_case.case_status.value if hasattr(sample_case.case_status, "value") else str(sample_case.case_status)
+    res_filter = client.get(f"/api/cases?status={status_str}")
     assert res_filter.status_code == 200
     filter_data = res_filter.json()
     assert filter_data["total_count"] >= 1

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { CaseQueueItem } from "@/types/api";
 import { RiskBadge, CaseStatusBadge, ActionBadge } from "./StatusBadge";
-import { Search, Filter, ShieldQuestion, ArrowRight } from "lucide-react";
+import { Search, ShieldQuestion, ArrowRight, ListFilter } from "lucide-react";
 
 interface CaseQueueProps {
   cases: CaseQueueItem[];
@@ -40,53 +40,52 @@ export const CaseQueue: React.FC<CaseQueueProps> = ({
   });
 
   return (
-    <div className="flex flex-col h-full bg-brand-900/60 border border-brand-700/60 rounded-xl overflow-hidden glass-panel">
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0b1019]/90 shadow-2xl shadow-black/20 backdrop-blur-xl">
       {/* Top Filter & Search Bar */}
-      <div className="p-3.5 border-b border-brand-700/60 flex flex-col gap-3">
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 border-b border-white/[0.07] p-4">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-orange-400" />
-            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">
-              Investigation Queue
+            <ListFilter className="h-4 w-4 text-orange-400" />
+            <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-200">
+              Case queue
             </h3>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-brand-800 text-slate-400 border border-brand-700 font-mono">
+            <span className="rounded-full border border-white/[0.07] bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] text-slate-400">
               {filteredCases.length}
             </span>
           </div>
+        </div>
 
-          {/* Filter Tabs */}
-          <div className="flex items-center gap-1 bg-brand-950/80 p-0.5 rounded-lg border border-brand-700/60 text-xs">
+        <div className="flex items-center gap-1 overflow-x-auto rounded-xl border border-white/[0.06] bg-black/20 p-1 text-xs">
             {["ALL", "IN_PROGRESS", "AWAITING_APPROVAL", "COMPLETED"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setFilterTab(tab)}
-                className={`px-2.5 py-1 rounded font-medium transition-all ${
+                className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[9px] font-semibold transition-all ${
                   filterTab === tab
-                    ? "bg-orange-500/20 text-orange-400 border border-orange-500/40"
+                    ? "border border-orange-500/30 bg-orange-500/15 text-orange-300"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 {tab.replace(/_/g, " ")}
               </button>
             ))}
-          </div>
         </div>
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-500" />
           <input
             type="text"
             placeholder="Search by case ID, trigger, or risk level..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-1.5 bg-brand-950/90 border border-brand-700 rounded-lg text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-orange-500/60 transition-colors"
+            className="w-full rounded-xl border border-white/[0.07] bg-black/20 py-2 pl-9 pr-4 text-xs text-slate-200 placeholder:text-slate-600 focus:border-orange-500/50 focus:outline-none"
           />
         </div>
       </div>
 
       {/* Case List Body */}
-      <div className="flex-1 overflow-y-auto divide-y divide-brand-700/40">
+      <div className="flex-1 divide-y divide-white/[0.055] overflow-y-auto">
         {isLoading && cases.length === 0 ? (
           <div className="p-8 text-center text-slate-400">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent mb-3" />
@@ -108,10 +107,10 @@ export const CaseQueue: React.FC<CaseQueueProps> = ({
               <div
                 key={c.case_id}
                 onClick={() => onSelectCase(c.case_id)}
-                className={`p-3.5 cursor-pointer transition-all flex flex-col gap-2 ${
+                className={`relative flex cursor-pointer flex-col gap-2.5 px-4 py-4 transition-all ${
                   isSelected
-                    ? "bg-orange-500/10 border-l-4 border-l-orange-500 border-r-0 border-y-0"
-                    : "hover:bg-brand-800/40 border-l-4 border-l-transparent"
+                    ? "bg-gradient-to-r from-orange-500/[0.13] to-transparent before:absolute before:inset-y-3 before:left-0 before:w-0.5 before:rounded-full before:bg-orange-400"
+                    : "hover:bg-white/[0.035]"
                 }`}
               >
                 {/* Header row: ID & Status */}

@@ -72,24 +72,23 @@ class RecordPreEvidenceNBANode:
                     evidence_ids=list(state.supporting_evidence_ids),
                 )
 
-        new_count = state.iteration_count + 1
+        cur_count = state.iteration_count
 
         evt = TimelineEvent(
             event_type="PRE_EVIDENCE_NBA_RECORDED",
             node_name="RecordPreEvidenceNBANode",
             description=(
                 f"Recorded pre-evidence recommendation: {pre_nba.action_type.value if hasattr(pre_nba.action_type, 'value') else pre_nba.action_type}. "
-                f"Iteration loop count: {new_count}."
+                f"Iteration loop count: {cur_count}."
             ),
             details={
                 "action_type": pre_nba.action_type.value if hasattr(pre_nba.action_type, "value") else str(pre_nba.action_type),
-                "iteration_count": new_count,
+                "iteration_count": cur_count,
             },
         )
 
         return {
             "pre_evidence_next_best_action": pre_nba,
-            "iteration_count": new_count,
             "case_status": CaseStatus.AWAITING_EVIDENCE,
             "timeline": [evt],
         }
@@ -158,53 +157,55 @@ class IngestEvidenceNode:
         """
         logger.info("Ingesting additional evidence for case %s", state.case_id)
 
-        mock_responses: List[Dict[str, Any]] = []
+        mock_evidence_items: List[EvidenceItem] = []
 
         # If specific evidence requests exist, generate matching mock responses
         if state.requested_evidence:
             for req in state.requested_evidence:
-                ev_type = req.evidence_type.upper()
+                ev_type = str(req.evidence_type).upper()
                 if "CUSTOMER" in ev_type:
-                    resp = self.customer_service.request_confirmation(
+                    _, items = self.customer_service.request_confirmation(
                         customer_id=req.target_entity_id,
                         transaction_id=state.transaction_id or "TX_UNKNOWN",
                     )
-                    mock_responses.append(resp.result)
+                    mock_evidence_items.extend(items)
                 elif "AUTH" in ev_type or "STEP_UP" in ev_type:
-                    resp = self.auth_service.challenge_user(
+                    _, items = self.auth_service.challenge_user(
                         account_id=req.target_entity_id,
                     )
-                    mock_responses.append(resp.result)
+                    mock_evidence_items.extend(items)
                 else:
-                    resp = self.analyst_service.request_analyst_review(
+                    _, items = self.analyst_service.request_analyst_review(
                         case_id=state.case_id,
                         question=req.reason,
                     )
-                    mock_responses.append(resp.result)
+                    mock_evidence_items.extend(items)
         else:
             # Default fallback mock response
-            resp = self.customer_service.request_confirmation(
+            _, items = self.customer_service.request_confirmation(
                 customer_id=state.customer_id or "CUST_DEFAULT",
                 transaction_id=state.transaction_id or "TX_DEFAULT",
             )
-            mock_responses.append(resp.result)
+            mock_evidence_items.extend(items)
 
         # Ingest responses using helper
-        patch = ingest_mock_evidence(state, mock_responses)
+        patch = ingest_mock_evidence(state, mock_evidence_items)
 
         # Recalculate graph/behavioral features with the new evidence
         try:
-            raw_graph = {"neighborhood": {}, "features": state.graph_features}
-            recalc_features = self.feature_engine.compute_features(raw_graph)
-            patch["graph_features"] = {**state.graph_features, **recalc_features.features}
+            recalc_features = self.feature_engine.compute_features(
+                evidence=mock_evidence_items,
+                state=state,
+            )
+            patch["graph_features"] = {**state.graph_features, **recalc_features.to_dict()}
         except Exception as exc:
             logger.debug("Feature recalculation fallback: %s", exc)
 
         evt = TimelineEvent(
             event_type="ADDITIONAL_EVIDENCE_INGESTED",
             node_name="IngestEvidenceNode",
-            description=f"Ingested {len(mock_responses)} additional evidence item(s). Recalculated features.",
-            details={"items_count": len(mock_responses)},
+            description=f"Ingested {len(mock_evidence_items)} additional evidence item(s). Recalculated features.",
+            details={"items_count": len(mock_evidence_items)},
         )
         patch["timeline"] = [evt]
 
@@ -228,26 +229,29 @@ class DetermineNextBestActionNode:
         # If post-evidence NBA already established, keep it
         post_nba = state.post_evidence_next_best_action
         if post_nba is None:
-            risk = state.risk_level or RiskLevel.MEDIUM
-            if risk == RiskLevel.CRITICAL:
-                action_type = ActionType.BLOCK_ACCOUNT
-                reasoning = "Critical risk confirmed across multiple correlated graph and transaction signals; immediate account block required."
-            elif risk == RiskLevel.HIGH:
-                action_type = ActionType.BLOCK_TRANSACTION
-                reasoning = "High risk threshold exceeded with verified anomalous indicators; blocking transaction."
-            elif risk == RiskLevel.LOW:
-                action_type = ActionType.ALLOW_TRANSACTION
-                reasoning = "Low risk assessment grounded in verified legitimate baseline behavior; transaction permitted."
+            if state.pre_evidence_next_best_action is not None and state.iteration_count == 0:
+                post_nba = state.pre_evidence_next_best_action
             else:
-                action_type = ActionType.MONITOR_TRANSACTION
-                reasoning = "Moderate ambiguity persists; placing transaction on active surveillance."
+                risk = state.risk_level or RiskLevel.MEDIUM
+                if risk == RiskLevel.CRITICAL:
+                    action_type = ActionType.BLOCK_ACCOUNT
+                    reasoning = "Critical risk confirmed across multiple correlated graph and transaction signals; immediate account block required."
+                elif risk == RiskLevel.HIGH:
+                    action_type = ActionType.BLOCK_TRANSACTION
+                    reasoning = "High risk threshold exceeded with verified anomalous indicators; blocking transaction."
+                elif risk == RiskLevel.LOW:
+                    action_type = ActionType.ALLOW_TRANSACTION
+                    reasoning = "Low risk assessment grounded in verified legitimate baseline behavior; transaction permitted."
+                else:
+                    action_type = ActionType.MONITOR_TRANSACTION
+                    reasoning = "Moderate ambiguity persists; placing transaction on active surveillance."
 
-            post_nba = NextBestAction(
-                action_id=generate_action_id(),
-                action_type=action_type,
-                reasoning=reasoning,
-                evidence_ids=list(state.supporting_evidence_ids),
-            )
+                post_nba = NextBestAction(
+                    action_id=generate_action_id(),
+                    action_type=action_type,
+                    reasoning=reasoning,
+                    evidence_ids=list(state.supporting_evidence_ids),
+                )
 
         evt = TimelineEvent(
             event_type="NEXT_BEST_ACTION_DETERMINED",
@@ -300,5 +304,8 @@ class ReportIfRequiredNode:
             return {}
 
         logger.info("Generating formal SAR filing for case %s", state.case_id)
-        report, patch = self.sar_generator.generate(state, output_dir=self.output_dir)
+        if hasattr(self.sar_generator, "generate_sar"):
+            report, patch = self.sar_generator.generate_sar(state, output_dir=self.output_dir)
+        else:
+            report, patch = self.sar_generator.generate(state, output_dir=self.output_dir)
         return patch

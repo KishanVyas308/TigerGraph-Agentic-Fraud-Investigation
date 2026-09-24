@@ -21,8 +21,9 @@ logger = get_logger("agents.nodes.case_indexer")
 class CaseSummaryEmbedderNode:
     """LangGraph node managing case summary vector embedding and case memory indexing."""
 
-    def __init__(self, indexer: Optional[CaseMemoryIndexer] = None):
+    def __init__(self, indexer: Optional[CaseMemoryIndexer] = None, persist: bool = False):
         self.indexer = indexer or CaseMemoryIndexer()
+        self.persist = persist
 
     async def process(self, state: FraudCaseState) -> Dict[str, Any]:
         """Embed case summary, update case memory index, and return state patch.
@@ -34,7 +35,7 @@ class CaseSummaryEmbedderNode:
             State patch dictionary with is_indexed, embedding_id, and timeline event.
         """
         logger.info("Executing case summary embedder node for case %s", state.case_id)
-        receipt = self.indexer.index_case(state)
+        receipt = self.indexer.index_case(state, persist=self.persist)
 
         event_type = "CASE_EMBEDDING_INDEXED" if receipt.is_indexed else "CASE_EMBEDDING_QUARANTINED"
         description = (

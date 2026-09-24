@@ -244,10 +244,10 @@ class TigerGraphClient:
         self,
         case_id: str,
         status: str,
-        risk_level: str,
-        confidence: float,
-        evidence_completeness: float,
-        summary: str,
+        risk_level: str = "UNKNOWN",
+        confidence: float = 0.0,
+        evidence_completeness: float = 0.0,
+        summary: str = "",
         stop_reason: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Safely append or update case state without overwriting history."""

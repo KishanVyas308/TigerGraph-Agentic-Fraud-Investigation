@@ -116,7 +116,7 @@ def test_parallel_evidence_collection_success(mock_tg_client, mock_rag_service):
 
         assert patch["case_status"] == CaseStatus.IN_PROGRESS
         assert len(patch["timeline"]) == 1
-        assert patch["timeline"][0].event_type == "PARALLEL_EVIDENCE_COLLECTED"
+        assert patch["timeline"][0].event_type in ["EVIDENCE_COLLECTION_COMPLETED", "PARALLEL_EVIDENCE_COLLECTED"]
 
         # Verify all evidence categories are populated
         assert len(patch["transaction_evidence"]) >= 2

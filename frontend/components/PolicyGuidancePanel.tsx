@@ -67,7 +67,14 @@ export function PolicyGuidancePanel({
         title,
         document_type: docType,
         text,
-        relevance_score: ev.reliability || 0.9,
+        relevance_score:
+          ev.reliability === "HIGH"
+            ? 0.95
+            : ev.reliability === "MEDIUM"
+              ? 0.7
+              : ev.reliability === "LOW"
+                ? 0.4
+                : 0.1,
         graph_references: [],
         evidence_id: ev.evidence_id,
       });

@@ -423,6 +423,8 @@ class SARGenerator:
 
         return report, patch
 
+    generate = generate_sar
+
     def _render_markdown(self, report: SARReport) -> str:
         """Render a formatted, auditable Markdown document for the SAR."""
         amt_str = (

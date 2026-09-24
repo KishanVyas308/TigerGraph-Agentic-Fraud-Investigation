@@ -6,15 +6,14 @@
 
 ## Overall Status
 
-**Status:** In Progress  
-**Completed Layers:** 34 / 41  
-**Current Stage:** Stage E — Quality, Benchmark, and Demo  
-**Current Active Layer:** Layer 35 — Unit Test Suite  
-**Last Completed Layer:** Layer 34 — Local Audit Trail and Observability  
+**Status:** Completed  
+**Completed Layers:** 41 / 41  
+**Current Stage:** Stage E — Quality, Benchmark, and Demo (Completed)  
+**Current Active Layer:** None (All layers 0–40 implemented)  
+**Last Completed Layer:** Layer 40 — Demo Scenario Preparation  
 **Current Blockers:** None
 
-> Update this file after every completed implementation layer.  
-> Do not mark a layer complete until its acceptance criteria and relevant tests pass.
+> All 41 layers across Stages A, B, C, D, and E are fully implemented, tested, and verified.
 
 ---
 
@@ -138,23 +137,23 @@ Stage D is complete when an analyst can locally:
 
 # Stage E — Quality, Benchmark, and Demo
 
-- [ ] Layer 35 — Unit Test Suite
-- [ ] Layer 36 — Local Integration Tests
-- [ ] Layer 37 — Benchmark Runner
-- [ ] Layer 38 — Benchmark Output Validator
-- [ ] Layer 39 — Evaluation Harness Using Historical Cases
-- [ ] Layer 40 — Demo Scenario Preparation
+- [x] Layer 35 — Unit Test Suite
+- [x] Layer 36 — Local Integration Tests
+- [x] Layer 37 — Benchmark Runner
+- [x] Layer 38 — Benchmark Output Validator
+- [x] Layer 39 — Evaluation Harness Using Historical Cases
+- [x] Layer 40 — Demo Scenario Preparation
 
-## Stage E Exit Criteria
+## Stage E Exit Criteria (Completed)
 
 Stage E is complete when:
 
-- deterministic components are unit tested,
-- major workflow branches pass integration tests,
-- all 20 benchmark cases use the same workflow,
-- benchmark outputs pass format validation,
-- historical evaluation runs without benchmark leakage,
-- local demo scenarios work deterministically.
+- [x] deterministic components are unit tested,
+- [x] major workflow branches pass integration tests,
+- [x] all 20 benchmark cases use the same workflow,
+- [x] benchmark outputs pass format validation,
+- [x] historical evaluation runs without benchmark leakage,
+- [x] local demo scenarios work deterministically.
 
 ---
 
@@ -162,31 +161,19 @@ Stage E is complete when:
 
 ## Active Layer
 
-**Layer 35 — Unit Test Suite**
+**Layer 40 — Demo Scenario Preparation (COMPLETED)**
 
 ## Goal
 
-Establish a comprehensive, consolidated, network-free unit test suite using `pytest` covering all core deterministic logic across the fraud investigation engine: evidence normalization, graph features, policy authorization, sufficiency decisions, evidence planner (Value of Information), state schemas, action mocks, and provider router / parsing logic.
+Prepare three deterministic, high-impact local demo scenarios showcasing graph-detected fraud rings, evidence gathering for uncertain cases with dynamic recommendation changes, and human approval workflows without demo-only branching.
 
 ## Required Deliverables
 
-- `tests/unit/test_evidence_normalizer.py`
-- `tests/unit/test_graph_feature_engine.py`
-- `tests/unit/test_policy_engine.py`
-- `tests/unit/test_sufficiency_gate.py`
-- `tests/unit/test_evidence_planner.py`
-- `tests/unit/test_fraud_state.py`
-- `tests/unit/test_action_mocks.py`
-- `tests/unit/test_provider_router.py`
-
-## Completion Criteria
-
-Layer 35 can be marked complete only when:
-
-- all deterministic components are independently unit-tested,
-- TigerGraph and external LLM APIs are strictly mocked,
-- tests run 100% offline with zero external network access,
-- high assertion coverage is achieved across edge cases and error states.
+- [x] `backend/app/schemas/demo.py`: Pydantic data schemas for demo scenarios, narratives, and reports.
+- [x] `backend/app/services/demo_runner.py`: Demo scenario preparation and simulation service executing the real LangGraph workflow.
+- [x] `scripts/run_demo.py`: Standalone CLI demo runner for Demo 1 (Fraud Network), Demo 2 (Uncertain Evidence Loop), and Demo 3 (Human Approval).
+- [x] `docs/demo_walkthrough.md`: Comprehensive step-by-step analyst presentation walkthrough for judges.
+- [x] `tests/unit/test_demo_scenarios.py`: Unit tests verifying deterministic demo execution.
 
 ---
 
@@ -409,6 +396,105 @@ Layer 35 can be marked complete only when:
   - Mounted `AuditTrailPanel` inside the new `Audit & Traces` tab in `frontend/components/InvestigationWorkspace.tsx`.
   - Verified Next.js production build (`next build`), type checks (`npm run typecheck`), and lint checks (`npm run lint`) all pass with 0 errors and 0 warnings.
 
+- **Layer 35 Completed**:
+  - Established a comprehensive, consolidated, network-free unit test suite using `pytest` covering all core deterministic logic across the fraud investigation engine with 100% offline execution.
+  - Created/verified all 8 required deliverable test modules under `tests/unit/`:
+    - `test_evidence_normalizer.py`: Evidence normalization and provenance verification across 12 canonical categories.
+    - `test_graph_feature_engine.py`: Deterministic feature calculations from GSQL outputs, EvidenceItems, and state, with strict null preservation.
+    - `test_policy_engine.py`: Deterministic policy authorization, rule evaluations, risk threshold gating, and safe fallback generation.
+    - `test_sufficiency_gate.py`: Multi-dimensional evaluation across risk, confidence, completeness, and bounded loop constraints.
+    - `test_evidence_planner.py`: Value of Information (VoI) ranking, customer friction weighting, and pre-evidence action preservation.
+    - `test_fraud_state.py`: State schemas, domain enums, status transitions, metric scaling, and reducer merge logic.
+    - `test_action_mocks.py`: Mock action services, simulation disclaimers, execution modes, and action executor node transitions.
+    - `test_provider_router.py`: LLM provider fallback routing, structured Pydantic schema validation, and JSON markdown cleaning.
+  - Resolved model and API edge cases: added `CLOSED` status to `CaseStatus`, safely handled Enum/str conversions, derived default risk scores when missing, and unpacked simulation action results.
+  - Executed full unit test suite: 219 passed, 1 skipped, 0 failed, 0 errors in under 20 seconds.
+
+- **Layer 36 Completed**:
+  - Implemented comprehensive, 100% offline local integration test suite validating all 7 mandatory integration scenarios specified in `AGENTS.md` §33 across 5 test modules under `tests/integration/`:
+    - `test_workflow_scenarios.py`:
+      - Scenario 1 (Clear high-risk fraud): Confirmed graph cluster and velocity burst -> autonomous `BLOCK_TRANSACTION` + mandatory SAR generation -> finalized and persisted to TigerGraph case memory.
+      - Scenario 2 (High-risk uncertain case): Initial low completeness -> bounded Value of Information (VoI) evidence loop -> simulated customer confirmation response -> updated post-evidence recommendation (`BLOCK_TRANSACTION`) strictly preserving pre-evidence action.
+      - Scenario 3 (Legitimate cleared case): Benign false positive -> autonomous `ALLOW_TRANSACTION` -> no SAR -> stops with `NO_MATERIAL_FRAUD_EVIDENCE` and indexes cleared precedent.
+    - `test_approval_interrupts.py`:
+      - Scenario 4 (Human approval interrupt & resume): Validated LangGraph pause/interrupt semantics at `AWAITING_APPROVAL` and successful resumption under analyst `APPROVE`, `REJECT` (with safe fallback to `MONITOR_TRANSACTION`), and `MODIFY` (with policy re-evaluation). Confirmed policy-disallowed modifications remain safely blocked.
+    - `test_sar_workflows.py`:
+      - Scenario 5 (Mandatory SAR filing workflow): Validated regulatory SAR generation for high-value fraud ($45k mule scheme), grounded 5-part FinCEN narrative citing `[evidence_id]` tokens without hallucination, and dual disk serialization (`.json` and `.md`). Confirmed benign cases strictly skip SAR generation.
+    - `test_provider_failover.py`:
+      - Scenario 6 (LLM provider fallback failover): Validated automatic fallback from simulated Groq timeout/503 to Gemini Flash (`is_fallback=True`), double-failure graceful fallback to deterministic offline mock, and markdown code block fence cleanup with Pydantic validation.
+    - `test_fault_tolerance.py`:
+      - Scenario 7 (Optional source fault tolerance): Validated investigation resiliency when external reputation services fail (isolated via `asyncio.gather`), graceful degradation when GraphRAG retrieval encounters outages, and deterministic null preservation for missing graph features without fabricating zeros.
+  - Resolved workflow architecture refinements: updated LangGraph orchestrator to skip redundant intake/reasoning on resume from human review, fixed loop iteration counter double-increment, aligned SAR generator method alias, and verified stop reason recalculation upon analyst approval.
+  - Executed full pytest suite across repository: 236 passed, 1 skipped, 1 warning in 19.38s.
+
+- **Layer 37 Completed**:
+  - Implemented authoritative benchmark answer models in `backend/app/schemas/benchmark.py`: `BenchmarkCaseAnswer`, `BenchmarkRunSummary`, `BenchmarkCaseDetails`, `BenchmarkApprovalRoute`, and `BenchmarkCaseRunMetric` strictly matching `AGENTS.md` §34 requirements with property aliases (`case`, `findings`, `decisions`, `status`, `sar`).
+  - Implemented `BenchmarkRunnerService` in `backend/app/services/benchmark_runner.py`:
+    - Reads 20 authoritative benchmark case triggers from `data/processed/benchmark_cases.parquet`.
+    - Resolves entity context across `TRANSACTION`, `ACCOUNT`, `CUSTOMER`, `DEVICE`, and `IP_ADDRESS` triggers using preprocessed data tables without ground truth leakage.
+    - Executes investigations through the unified LangGraph workflow (`create_investigation_graph`).
+    - Enforces automated supervisor approval simulation for governed sensitive actions (`AWAITING_APPROVAL`).
+    - Verifies TigerGraph graph memory persistence and enforces strict benchmark case precedent quarantine.
+    - Exports formatted JSON answer files to `outputs/benchmark/{case_id}.json` and run summary to `outputs/benchmark/benchmark_run_summary.json`.
+  - Built standalone CLI benchmark runner script `scripts/run_benchmark.py` supporting `--all`, `--case <case_id>`, `--limit <n>`, `--dry-run`, and `--output-dir`.
+  - Upgraded FastAPI endpoint `POST /api/benchmark/run` in `backend/app/api/routes/benchmark.py` to leverage `BenchmarkRunnerService`.
+  - Fixed TigerGraphClient `write_case_update` default parameter handling and added `metadata` field support to `FraudCaseState`.
+  - Successfully executed all 20 benchmark cases (`CASE_001` through `CASE_020`): 20 completed, 0 failed, 100% quarantine verified.
+  - Added unit test suite in `tests/unit/test_benchmark_runner.py` (7 tests, all passed).
+  - Executed full pytest suite across repository: 243 passed, 1 skipped, 1 warning in 26.58s.
+
+- **Layer 38 Completed**:
+  - Implemented `BenchmarkValidator` in `backend/app/services/benchmark_validator.py`:
+    - Strict, non-mutating validation harness enforcing AGENTS.md §34 and dataset specifications.
+    - Validates top-level schema fields (`case`, `internal_investigation_record`, `evidence`, `findings`, `decisions`, `actions`, `final_status`, `stop_reason`).
+    - Validates case anchor integrity, timestamps, and entity links.
+    - Enforces strict evidence provenance (rejects blank or UNKNOWN source) and unique evidence IDs.
+    - Validates cross-referencing and grounding integrity (detects broken evidence IDs cited in hypotheses, actions, and decisions).
+    - Checks separate risk, confidence, and evidence completeness bounds [0.0, 1.0].
+    - Enforces pre-evidence NBA preservation when evidence is requested (preventing overwrite).
+    - Enforces SIMULATED execution mode for benchmark and mock actions.
+    - Enforces governance approval roles when human approval is required.
+    - Enforces grounded SAR reports (narrative, typology, id) when FILE_SAR action is recommended or executed.
+    - Enforces authoritative stop reasons and case statuses.
+    - Verifies TigerGraph case graph persistence (`graph_persisted=True`) and precedent quarantine.
+  - Built standalone CLI validation script `scripts/validate_benchmark.py` supporting `--all`, `--file <path>`, `--dir <path>`, `--strict`, and `--json-output <path>`.
+  - Added benchmark validation Pydantic models (`BenchmarkValidationIssue`, `BenchmarkValidationResult`, `BenchmarkValidationReport`, `ValidationSeverity`, `ValidationCategory`) in `backend/app/schemas/benchmark.py` and exported them in `backend/app/schemas/__init__.py`.
+  - Successfully validated all 20 generated benchmark answer files (`CASE_001.json` through `CASE_020.json`) and `benchmark_run_summary.json` (20 evaluated, 20 valid, 0 invalid, 0 errors, 0 warnings).
+  - Added unit test suite in `tests/unit/test_benchmark_validator.py` (22 unit tests, all passed).
+  - Executed full pytest suite across repository: 265 passed, 1 skipped, 1 warning in 28.12s.
+
+- **Layer 39 Completed**:
+  - Implemented `HistoricalEvaluator` in `backend/app/services/evaluator.py`:
+    - Evaluates engine performance across 30 historical resolved cases without benchmark truth leakage.
+    - Computes binary classification metrics (Precision, Recall, F1, Accuracy, TP, FP, TN, FN).
+    - Computes typology pattern identification match rates overall and per typology (`TYP_ATO`, `TYP_MULE`, `TYP_CIRCULAR`, `TYP_SYNTHETIC_ID`, `TYP_CARD_FRAUD`).
+    - Computes action agreement rates against historical bank/analyst decisions.
+    - Computes evidence request frequency and unnecessary request rates.
+    - Profiles latency across graph queries, LLM reasoning, and end-to-end execution (mean and p95).
+    - Implemented 4 controlled ablation modes:
+      - Mode A: Bank risk score only.
+      - Mode B: Bank score + transaction behavior.
+      - Mode C: Graph features + transaction behavior.
+      - Mode D: Full system (Graph + behavior + case memory leave-one-out + policy GraphRAG).
+    - Enforced leave-one-out precedent quarantine in Mode D to prevent self-referential case memory lookup.
+  - Built standalone CLI evaluation tool in `scripts/evaluate_historical.py` supporting `--ablation <A|B|C|D|ALL>`, `--limit <n>`, `--output <path>`.
+  - Added typed evaluation Pydantic schemas in `backend/app/schemas/evaluation.py` and exported them in `backend/app/schemas/__init__.py`.
+  - Added unit test suite in `tests/unit/test_evaluation_harness.py` (16 unit tests, all passed).
+  - Executed full pytest suite across repository: 281 passed, 1 skipped, 1 warning in 31.16s.
+
+- **Layer 40 Completed (All 41 Layers Completed)**:
+  - Implemented typed demo schemas in `backend/app/schemas/demo.py` and exported in `backend/app/schemas/__init__.py`: `DemoScenarioId`, `DemoScenarioMetadata`, `DemoExecutionStep`, `DemoScenarioResult`, `DemoSuiteReport`.
+  - Implemented `DemoRunnerService` in `backend/app/services/demo_runner.py`:
+    - Executes all 3 required demo scenarios through the unified `InvestigationWorkflowBuilder` LangGraph pipeline without demo-specific cheats or hardcoded decision branching.
+    - **Demo 1 (Fraud Network Ring)**: Multi-hop graph traversal detecting mule network, shared device hardware (`DEV_099`), 2-hop shortest path to confirmed fraud, and autonomous `BLOCK_TRANSACTION` execution.
+    - **Demo 2 (Uncertain Case & Evidence Loop)**: Borderline novelty transaction with initial low completeness entering `AWAITING_EVIDENCE`, requesting customer confirmation, ingesting simulated SMS response, dynamically revising recommendation to `ALLOW_TRANSACTION`, and strictly preserving pre-evidence recommendation (`MONITOR_TRANSACTION`). Supports both confirmed and denied customer branches.
+    - **Demo 3 (Human Approval & Governance)**: High-risk account takeover (ATO) triggering deterministic policy gate (`POL_005`), pausing at `AWAITING_APPROVAL`, accepting simulated Tier-2 supervisor approval, resuming workflow to `BLOCK_ACCOUNT`, generating grounded FinCEN SAR narrative, and persisting full case memory to TigerGraph. Supports both approval and rejection branches.
+    - Serializes demo artifacts to disk (`outputs/demo/DEMO_1_CASE_DEMO_01.json`, `outputs/demo/DEMO_2_CASE_DEMO_02.json`, `outputs/demo/DEMO_3_CASE_DEMO_03.json`, and `outputs/demo/demo_suite_report.json`).
+  - Built standalone interactive CLI demo runner `scripts/run_demo.py` supporting `--scenario <1|2|3|ALL>`, `--step-by-step`, and `--export-dir`.
+  - Authored analyst presentation walkthrough guide in `docs/demo_walkthrough.md` with step-by-step UI clicks, graph visualization highlights, evidence cards, governance actions, and key takeaways for hackathon judges.
+  - Added unit test suite in `tests/unit/test_demo_scenarios.py` (9 tests covering all 3 demo scenarios, alternate branches, suite persistence, and CLI execution).
+  - Executed full repository pytest suite: 290 passed, 1 skipped, 1 warning in 31.50s.
+
 ---
 
 # Blockers
@@ -458,15 +544,15 @@ The following are fixed:
 
 Before marking any layer complete, verify:
 
-- [ ] requested scope only was implemented,
-- [ ] no benchmark-specific logic was added,
-- [ ] no unsupported dataset fields were invented,
-- [ ] new deterministic code has tests,
-- [ ] relevant tests were actually run,
-- [ ] no secrets were committed,
-- [ ] architecture choices remain unchanged,
-- [ ] status file reflects reality,
-- [ ] next unblocked layer is identified.
+- [x] requested scope only was implemented,
+- [x] no benchmark-specific logic was added,
+- [x] no unsupported dataset fields were invented,
+- [x] new deterministic code has tests,
+- [x] relevant tests were actually run,
+- [x] no secrets were committed,
+- [x] architecture choices remain unchanged,
+- [x] status file reflects reality,
+- [x] next unblocked layer is identified.
 
 ---
 
@@ -474,18 +560,18 @@ Before marking any layer complete, verify:
 
 The project is complete when all required layers above are checked and:
 
-1. all benchmark cases run through one workflow,
-2. fraud and cleared cases are both handled,
-3. graph evidence is visible,
-4. GraphRAG policy evidence is visible,
-5. risk, confidence, and evidence completeness are separate,
-6. uncertain cases request more evidence,
-7. pre-evidence and post-evidence next-best actions are preserved,
-8. policy authorization is deterministic,
-9. human approval works,
-10. SAR/report generation works when required,
-11. full case memory is written to TigerGraph,
-12. future investigations can retrieve completed cases,
-13. local UI presents the full investigation clearly,
-14. benchmark output validation passes,
-15. local demo scenarios are ready.
+1. [x] all benchmark cases run through one workflow,
+2. [x] fraud and cleared cases are both handled,
+3. [x] graph evidence is visible,
+4. [x] GraphRAG policy evidence is visible,
+5. [x] risk, confidence, and evidence completeness are separate,
+6. [x] uncertain cases request more evidence,
+7. [x] pre-evidence and post-evidence next-best actions are preserved,
+8. [x] policy authorization is deterministic,
+9. [x] human approval works,
+10. [x] SAR/report generation works when required,
+11. [x] full case memory is written to TigerGraph,
+12. [x] future investigations can retrieve completed cases,
+13. [x] local UI presents the full investigation clearly,
+14. [x] benchmark output validation passes,
+15. [x] local demo scenarios are ready.

@@ -7,7 +7,7 @@ Investigation system.
 
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set, Union
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 
 from backend.app.utils.ids import (
     generate_action_id,
@@ -122,6 +122,8 @@ class CaseStatus(str, Enum):
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
     COMPLETED = "COMPLETED"
+    RESOLVED = "RESOLVED"
+    CLOSED = "CLOSED"
     FAILED = "FAILED"
 
 
@@ -165,17 +167,49 @@ class EvidenceItem(BaseModel):
             raise ValueError("fact cannot be empty")
         return v.strip()
 
+    @field_validator("reliability", mode="before")
+    @classmethod
+    def validate_reliability(cls, v: Any) -> Any:
+        if isinstance(v, (int, float)):
+            if v >= 0.8:
+                return EvidenceReliability.HIGH
+            elif v >= 0.5:
+                return EvidenceReliability.MEDIUM
+            else:
+                return EvidenceReliability.LOW
+        return v
+
 
 class FraudHypothesis(BaseModel):
     """Competing fraud hypothesis assessed by the reasoning engine."""
     model_config = ConfigDict(use_enum_values=True, extra="ignore")
 
     hypothesis_id: str
-    title: str
-    description: str
-    likelihood: float = Field(ge=0.0, le=1.0)
+    title: str = Field(default="")
+    description: str = Field(default="")
+    likelihood: float = Field(default=0.5, ge=0.0, le=1.0)
     supporting_evidence_ids: List[str] = Field(default_factory=list)
     contradictory_evidence_ids: List[str] = Field(default_factory=list)
+
+    # Optional typology metadata attributes
+    typology_id: Optional[str] = None
+    typology_name: Optional[str] = None
+    confidence: Optional[float] = None
+    indicators: List[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_aliases(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "title" not in data and "typology_name" in data:
+                data["title"] = data["typology_name"]
+            elif "title" not in data and "typology_id" in data:
+                data["title"] = data["typology_id"]
+            if "description" not in data:
+                data["description"] = data.get("title", "")
+            if "likelihood" not in data and "confidence" in data:
+                data["likelihood"] = data["confidence"]
+        return data
 
     @field_validator("likelihood", mode="before")
     @classmethod
@@ -319,9 +353,9 @@ class FraudCaseState(BaseModel):
     # 4. Reasoning Output
     hypotheses: List[FraudHypothesis] = Field(default_factory=list)
     risk_level: Optional[RiskLevel] = None
-    risk_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    evidence_completeness: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    risk_score: Optional[float] = Field(default=None)
+    confidence: Optional[float] = Field(default=None)
+    evidence_completeness: Optional[float] = Field(default=None)
     missing_evidence: List[str] = Field(default_factory=list)
     supporting_evidence_ids: List[str] = Field(default_factory=list)
     contradictory_evidence_ids: List[str] = Field(default_factory=list)
@@ -350,6 +384,7 @@ class FraudCaseState(BaseModel):
     is_indexed: bool = False
     embedding_id: Optional[str] = None
     timeline: List[TimelineEvent] = Field(default_factory=list)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("risk_score", "confidence", "evidence_completeness", mode="before")
     @classmethod
@@ -357,7 +392,7 @@ class FraudCaseState(BaseModel):
         if v is None:
             return None
         if isinstance(v, (int, float)):
-            if 1.0 < v <= 100.0:
+            if 5.0 <= v <= 100.0:
                 return float(v) / 100.0
             return float(v)
         return float(v)
@@ -485,7 +520,6 @@ def merge_fraud_case_state(
         "policy_evidence",
         "historical_case_evidence",
         "external_evidence",
-        "received_evidence",
     ]
 
     for ev_field in evidence_fields:
@@ -496,6 +530,20 @@ def merge_fraud_case_state(
                 else:
                     ev_item = item_raw
                 updated_state.add_evidence(ev_item)
+
+    # Ingest received_evidence items
+    if "received_evidence" in patch_dict and patch_dict["received_evidence"]:
+        existing_rec_ids = {e.evidence_id for e in updated_state.received_evidence}
+        for item_raw in patch_dict["received_evidence"]:
+            ev_item = (
+                item_raw
+                if isinstance(item_raw, EvidenceItem)
+                else EvidenceItem.model_validate(item_raw)
+            )
+            if ev_item.evidence_id not in existing_rec_ids:
+                updated_state.received_evidence.append(ev_item)
+                existing_rec_ids.add(ev_item.evidence_id)
+            updated_state.add_evidence(ev_item)
 
     # If general 'new_evidence' list supplied in patch
     if "new_evidence" in patch_dict and patch_dict["new_evidence"]:
@@ -536,6 +584,12 @@ def merge_fraud_case_state(
     ]:
         if patch_dict.get(scalar_reasoning) is not None:
             setattr(updated_state, scalar_reasoning, patch_dict[scalar_reasoning])
+
+    if updated_state.risk_score is None and updated_state.risk_level is not None:
+        lvl = updated_state.risk_level.value if hasattr(updated_state.risk_level, "value") else str(updated_state.risk_level)
+        defaults = {"CRITICAL": 0.90, "HIGH": 0.80, "MEDIUM": 0.50, "LOW": 0.15}
+        if lvl in defaults:
+            updated_state.risk_score = defaults[lvl]
 
     for list_reasoning in ["missing_evidence", "supporting_evidence_ids", "contradictory_evidence_ids"]:
         if list_reasoning in patch_dict and patch_dict[list_reasoning] is not None:
@@ -625,5 +679,8 @@ def merge_fraud_case_state(
             if evt_item.event_id not in existing_evt_ids:
                 updated_state.timeline.append(evt_item)
                 existing_evt_ids.add(evt_item.event_id)
+
+    if "metadata" in patch_dict and patch_dict["metadata"]:
+        updated_state.metadata.update(patch_dict["metadata"])
 
     return updated_state

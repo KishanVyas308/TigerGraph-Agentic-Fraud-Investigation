@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 from backend.app.actions.mocks import MockActionExecutionService
 from backend.app.models.state import (
     ActionType,
+    ApprovalStatus,
     CaseStatus,
     FraudCaseState,
     NextBestAction,
@@ -44,7 +45,13 @@ class ActionExecutorNode:
             return {}
 
         # If action requires approval and has not been approved, pause execution
-        if state.approval_required or state.case_status == CaseStatus.AWAITING_APPROVAL:
+        is_approved = state.approval_status in [
+            ApprovalStatus.APPROVED,
+            ApprovalStatus.MODIFIED,
+            "APPROVED",
+            "MODIFIED",
+        ]
+        if (state.approval_required or state.case_status == CaseStatus.AWAITING_APPROVAL) and not is_approved:
             logger.info(
                 "Action '%s' in case %s is awaiting human approval. Execution deferred.",
                 action.action_type,

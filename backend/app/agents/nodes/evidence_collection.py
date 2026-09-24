@@ -43,6 +43,10 @@ class ParallelEvidenceCollectionNode:
         self.rag_service = rag_service or GraphRAGRetrievalService(tigergraph_client=self.tg_client)
         self.normalizer = normalizer or EvidenceNormalizer()
 
+    async def process(self, state: FraudCaseState) -> Dict[str, Any]:
+        """LangGraph node execution entry point."""
+        return await self.execute(state)
+
     async def execute(self, state: FraudCaseState) -> Dict[str, Any]:
         """Execute all baseline evidence collection branches concurrently."""
         txn_id = state.transaction_id
@@ -103,7 +107,7 @@ class ParallelEvidenceCollectionNode:
         )]
 
         timeline_event = TimelineEvent(
-            event_type="PARALLEL_EVIDENCE_COLLECTED",
+            event_type="EVIDENCE_COLLECTION_COMPLETED",
             node_name="parallel_evidence_collection",
             description=f"Collected {len(deduped_items)} baseline evidence items across 6 parallel branches.",
             details={

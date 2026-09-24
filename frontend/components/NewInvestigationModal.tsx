@@ -17,7 +17,7 @@ interface NewInvestigationModalProps {
 const PRESETS = [
   {
     title: "Velocity Burst Alert",
-    trigger: "VELOCITY_BURST" as TriggerType,
+    trigger: "TRANSACTION_ALERT" as TriggerType,
     txId: "TXN_BURST_001",
     custId: "CUST_9912",
     accounts: "ACC_5501, ACC_5502",
@@ -25,7 +25,7 @@ const PRESETS = [
   },
   {
     title: "Device Anomaly & Sharing",
-    trigger: "DEVICE_ANOMALY" as TriggerType,
+    trigger: "GRAPH_ANOMALY" as TriggerType,
     txId: "TXN_DEV_4401",
     custId: "CUST_3301",
     accounts: "ACC_8812",
@@ -33,7 +33,7 @@ const PRESETS = [
   },
   {
     title: "High Risk Offshore Transfer",
-    trigger: "HIGH_RISK_MERCHANT" as TriggerType,
+    trigger: "HIGH_RISK_RULE" as TriggerType,
     txId: "TXN_MERCH_771",
     custId: "CUST_1105",
     accounts: "ACC_9921",
@@ -156,10 +156,10 @@ export const NewInvestigationModal: React.FC<NewInvestigationModalProps> = ({
                 className="w-full px-3 py-2 bg-brand-950 border border-brand-700 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-orange-500/60 font-mono"
               >
                 <option value="TRANSACTION_ALERT">TRANSACTION_ALERT</option>
-                <option value="VELOCITY_BURST">VELOCITY_BURST</option>
-                <option value="DEVICE_ANOMALY">DEVICE_ANOMALY</option>
-                <option value="HIGH_RISK_MERCHANT">HIGH_RISK_MERCHANT</option>
-                <option value="MANUAL_ANALYST_TRIGGER">MANUAL_ANALYST_TRIGGER</option>
+                <option value="HIGH_RISK_RULE">HIGH_RISK_RULE</option>
+                <option value="CUSTOMER_REPORT">CUSTOMER_REPORT</option>
+                <option value="ANALYST_REFERRAL">ANALYST_REFERRAL</option>
+                <option value="GRAPH_ANOMALY">GRAPH_ANOMALY</option>
               </select>
             </div>
 

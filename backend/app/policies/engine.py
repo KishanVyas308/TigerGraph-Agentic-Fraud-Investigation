@@ -23,6 +23,7 @@ from backend.app.models.state import (
     ExecutionMode,
     FraudCaseState,
     NextBestAction,
+    RiskLevel,
 )
 from backend.app.policies.loader import load_policy_config
 from backend.app.utils.logging import get_logger
@@ -117,7 +118,16 @@ class PolicyEngine:
         # Check risk score threshold limits
         min_risk = float(rule.get("min_risk_score", 0.0))
         max_risk = float(rule.get("max_risk_score", 1.0))
-        risk_score = state.risk_score if state.risk_score is not None else 0.5
+        risk_score = state.risk_score
+        if risk_score is None:
+            if state.risk_level in (RiskLevel.CRITICAL, "CRITICAL"):
+                risk_score = 0.90
+            elif state.risk_level in (RiskLevel.HIGH, "HIGH"):
+                risk_score = 0.80
+            elif state.risk_level in (RiskLevel.LOW, "LOW"):
+                risk_score = 0.15
+            else:
+                risk_score = 0.50
 
         if risk_score > max_risk:
             unmet_prereqs.append(f"Risk score {risk_score:.2f} exceeds maximum allowed ({max_risk:.2f}) for action {action_val}")
@@ -203,3 +213,14 @@ class PolicyEngine:
             approval_role=role,
             execution_mode=ExecutionMode.SIMULATED,
         )
+
+
+_policy_engine_instance: Optional[PolicyEngine] = None
+
+
+def get_policy_engine(config_path: Optional[str] = None) -> PolicyEngine:
+    """Return a cached or newly initialized PolicyEngine instance."""
+    global _policy_engine_instance
+    if _policy_engine_instance is None or config_path is not None:
+        _policy_engine_instance = PolicyEngine(config_path=config_path)
+    return _policy_engine_instance
